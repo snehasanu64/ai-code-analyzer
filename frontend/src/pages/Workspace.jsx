@@ -93,18 +93,7 @@ export default function Workspace() {
         </div>
       </header>
 
-      {warning && (
-        <div className="px-5 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-700 shrink-0 flex items-center justify-between">
-          <span>{warning}</span>
-          <button
-            onClick={() => setWarning("")}
-            className="text-amber-600 hover:text-amber-900 font-bold px-2 py-0.5 rounded hover:bg-amber-100 transition-colors ml-4"
-            title="Dismiss warning"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+
 
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
         <LeftPanel onLoadSnippet={loadSnippet} refreshTrigger={refreshTrigger} />
