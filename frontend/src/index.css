@@ -1,0 +1,288 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===================== THEME VARIABLES ===================== */
+:root,
+[data-theme="dark"] {
+  --bg-base:        #0B1020;
+  --bg-surface:     #111827;
+  --bg-surface-lt:  #1A2333;
+  --text-primary:   #FFFFFF;
+  --text-secondary: #9CA3AF;
+  --border-clr:     rgba(255,255,255,0.08);
+  --scrollbar-track:#0b1020;
+  --scrollbar-thumb:#2a2f45;
+  --scrollbar-hover:#3d4462;
+  --glass-bg:       rgba(255,255,255,0.04);
+  --glass-border:   rgba(255,255,255,0.10);
+  --glass-shadow:   0 8px 32px rgba(0,0,0,0.35);
+  --btn-sec-bg:     rgba(255,255,255,0.06);
+  --btn-sec-text:   #ffffff;
+  --btn-sec-border: rgba(255,255,255,0.12);
+  --nav-bg:         rgba(11,16,32,0.80);
+  --nav-border:     rgba(255,255,255,0.08);
+  --glow-1:         rgba(124,58,237,0.15);
+  --glow-2:         rgba(6,182,212,0.12);
+  --glow-3:         rgba(59,130,246,0.12);
+}
+
+[data-theme="light"] {
+  --bg-base:        #F3F4FB;
+  --bg-surface:     #FFFFFF;
+  --bg-surface-lt:  #E8EAF6;
+  --text-primary:   #111827;
+  --text-secondary: #6B7280;
+  --border-clr:     rgba(0,0,0,0.08);
+  --scrollbar-track:#f1f3f9;
+  --scrollbar-thumb:#c5cae0;
+  --scrollbar-hover:#a3aac8;
+  --glass-bg:       rgba(255,255,255,0.75);
+  --glass-border:   rgba(0,0,0,0.08);
+  --glass-shadow:   0 8px 32px rgba(0,0,0,0.07);
+  --btn-sec-bg:     #ffffff;
+  --btn-sec-text:   #374151;
+  --btn-sec-border: rgba(0,0,0,0.12);
+  --nav-bg:         rgba(243,244,251,0.90);
+  --nav-border:     rgba(0,0,0,0.07);
+  --glow-1:         rgba(124,58,237,0.06);
+  --glow-2:         rgba(6,182,212,0.05);
+  --glow-3:         rgba(59,130,246,0.05);
+}
+/* ========================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  background-image:
+    radial-gradient(circle at 20% 20%, var(--glow-1), transparent 40%),
+    radial-gradient(circle at 80% 0%,  var(--glow-2), transparent 40%),
+    radial-gradient(circle at 50% 100%,var(--glow-3), transparent 40%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+::selection {
+  background: rgba(124, 58, 237, 0.4);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover);
+}
+
+:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@layer components {
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 1rem;
+    box-shadow: var(--glass-shadow);
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+
+  .gradient-border {
+    position: relative;
+    border-radius: 1rem;
+  }
+  .gradient-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: 1rem;
+    background: theme("backgroundImage.gradient-border");
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold text-white
+      bg-gradient-primary bg-[length:200%_200%] shadow-glow-sm transition-all duration-300
+      hover:shadow-glow hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    background: var(--btn-sec-bg);
+    color: var(--btn-sec-text);
+    border: 1px solid var(--btn-sec-border);
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  .btn-secondary:hover {
+    opacity: 0.85;
+  }
+
+  .input-field {
+    @apply w-full rounded-xl bg-white/[0.04] border border-white/10 px-4 py-3 text-sm text-white
+      placeholder:text-muted focus:border-primary/60 focus:bg-white/[0.06] outline-none transition-colors;
+  }
+
+  .section-eyebrow {
+    @apply text-xs font-mono uppercase tracking-[0.2em] text-accent;
+  }
+
+  /* ---------- Light "workspace" theme (used on auth + app pages) ---------- */
+  .light-shell {
+    @apply bg-[#F6F7FB] text-gray-900;
+    background-image: none;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .light-card {
+    @apply bg-white border border-gray-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.06)];
+  }
+
+  .light-input {
+    @apply w-full rounded-xl bg-white border border-gray-200 px-4 py-3 text-sm text-gray-900
+      placeholder:text-gray-400 focus:border-primary/50 focus:ring-2 focus:ring-primary/10 outline-none transition-colors;
+  }
+
+  .light-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold text-white
+      bg-gradient-primary shadow-[0_4px_14px_rgba(124,58,237,0.25)] transition-all duration-200
+      hover:shadow-[0_6px_20px_rgba(124,58,237,0.35)] hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100;
+  }
+
+  .light-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-medium text-sm text-gray-600
+      bg-white border border-gray-200 transition-colors hover:bg-gray-50 hover:text-gray-900;
+  }
+
+  .light-pill {
+    @apply inline-flex flex-col items-center justify-center gap-1.5 rounded-xl px-3 py-3 text-xs font-medium
+      border transition-all duration-150;
+  }
+
+  .markdown-body h1 {
+    @apply font-display font-bold text-[17px] text-gray-900 mb-3 leading-snug;
+  }
+  .markdown-body h2 {
+    @apply font-display font-bold text-[15px] text-gray-900 mt-6 mb-2.5 leading-snug;
+  }
+  .markdown-body h3 {
+    @apply font-display font-semibold text-[13.5px] text-gray-800 mt-4 mb-2;
+  }
+  .markdown-body p {
+    @apply mb-3;
+  }
+  .markdown-body strong {
+    @apply font-semibold text-gray-800;
+  }
+  .markdown-body em {
+    @apply italic text-gray-600;
+  }
+  .markdown-body ul {
+    @apply list-disc pl-5 mb-3 space-y-1;
+  }
+  .markdown-body ol {
+    @apply list-decimal pl-5 mb-3 space-y-1;
+  }
+  .markdown-body code {
+    @apply font-mono text-[12px] bg-violet-50 text-primary rounded px-1.5 py-0.5;
+  }
+  .markdown-body pre {
+    @apply bg-gray-900 text-gray-100 rounded-xl p-3 mb-3 overflow-x-auto text-[12px] font-mono leading-relaxed;
+  }
+  .markdown-body pre code {
+    @apply bg-transparent text-gray-100 p-0;
+  }
+  .markdown-body hr {
+    @apply border-gray-100 my-4;
+  }
+
+  /* ---------- Rendered markdown (AI Insights Report) ---------- */
+  .markdown-body {
+    @apply text-[13.5px] text-gray-700 leading-relaxed;
+  }
+  .markdown-body h1 {
+    @apply font-display font-bold text-lg text-gray-900 mt-0 mb-3;
+  }
+  .markdown-body h2 {
+    @apply font-display font-bold text-[15px] text-gray-900 mt-6 mb-2.5 first:mt-0;
+  }
+  .markdown-body h3 {
+    @apply font-display font-semibold text-sm text-gray-900 mt-4 mb-2;
+  }
+  .markdown-body p {
+    @apply mb-3;
+  }
+  .markdown-body ul {
+    @apply list-disc pl-5 mb-3 space-y-1;
+  }
+  .markdown-body ol {
+    @apply list-decimal pl-5 mb-3 space-y-1;
+  }
+  .markdown-body strong {
+    @apply font-semibold text-gray-900;
+  }
+  .markdown-body em {
+    @apply italic text-gray-600;
+  }
+  .markdown-body code {
+    @apply font-mono text-[12px] bg-gray-100 text-primary-dark rounded px-1.5 py-0.5;
+  }
+  .markdown-body pre {
+    @apply bg-gray-50 border border-gray-100 rounded-xl p-3 mb-3 overflow-x-auto;
+  }
+  .markdown-body pre code {
+    @apply bg-transparent p-0 text-gray-700;
+  }
+  .markdown-body a {
+    @apply text-primary underline underline-offset-2;
+  }
+  .markdown-body hr {
+    @apply border-gray-100 my-4;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-primary bg-clip-text text-transparent;
+  }
+}
