@@ -361,44 +361,70 @@ async function generateDocumentation({ code, language, docType }) {
   let funcDocsMarkdown = "";
   if (symbols.length > 0) {
     funcDocsMarkdown = symbols.map((f) => {
-      // Determine description based on name heuristics
-      let desc = "Performs utility operations and business logic calculations.";
-      let params = "None";
-      let returns = "Void / undefined";
+      let desc = "Performs utility operations and data logic execution.";
+      let paramLines = [];
+      let paramNames = [];
+      let returnType = "any";
+      let returnDesc = "Void / undefined";
 
-      const fl = f.toLowerCase();
-      if (fl.includes("connect") || fl.includes("db") || fl.includes("mongo")) {
-        desc = "Asynchronously initiates and manages the connection lifecycle with the database server, utilizing environment URI variables.";
-        params = "- `uri` (string, optional): Database connection string fallback.";
-        returns = "- `Promise<void>`: Resolves when DB hand-shake completes successfully.";
-      } else if (fl.includes("add") || fl.includes("sum")) {
-        desc = "Computes the arithmetic sum of the provided numerical inputs.";
-        params = "- `a` (number): First operand.\n- `b` (number): Second operand.";
-        returns = "- `number`: Combined sum of operands.";
-      } else if (fl.includes("auth") || fl.includes("login") || fl.includes("token")) {
-        desc = "Handles authentication requests, verifies user credentials, and returns access keys.";
-        params = "- `req` (Request): Incoming Express request containing credentials.\n- `res` (Response): Outgoing client response.";
-        returns = "- `Promise<Response>`: JSON object with success status and user token.";
-      } else if (fl.includes("user") || fl.includes("profile")) {
-        desc = "Manages user record operations, profile adjustments, or details retrieval.";
-        params = "- `userId` (string): Unique user identifier.";
-        returns = "- `Object`: Retrieved profile data schema.";
+      // 1. Extract exact parameters from function signature
+      const paramRegex = new RegExp(`(?:function\\s+${f}|${f}\\s*=\\s*(?:async\\s*)?\\(|def\\s+${f}\\s*\\(|class\\s+${f}|\\b\\w+\\s+${f}\\s*\\()\\s*\\(([^)]*)\\)`, "i");
+      const paramMatch = code.match(paramRegex);
+      if (paramMatch && paramMatch[1].trim()) {
+        paramNames = paramMatch[1].split(",").map((p) => p.trim().split(/[\s=:]+/)[0].trim()).filter(Boolean);
+        paramLines = paramNames.map((p) => `- \`${p}\` (any): Input argument.`);
       }
+
+      // 2. Detect return value/statement from body
+      const bodyMatch = code.match(new RegExp(`(?:function\\s+${f}|def\\s+${f})[\\s\\S]*?\\{([\\s\\S]*?)\\}`, "i"));
+      const bodyText = bodyMatch ? bodyMatch[1] : code;
+      const returnMatch = bodyText.match(/return\s+([^;\n]+)/i);
+      if (returnMatch) {
+        const retExpr = returnMatch[1].trim();
+        returnType = retExpr.startsWith("[") ? "Array" : retExpr.startsWith("{") ? "Object" : retExpr === "true" || retExpr === "false" ? "boolean" : "any";
+        returnDesc = `- \`${returnType}\`: Returns \`${retExpr}\`.`;
+      }
+
+      // 3. Smart description based on function name
+      const fl = f.toLowerCase();
+      if (fl.includes("duplicate") || fl.includes("dupe")) {
+        desc = "Identifies and extracts duplicate values from the input collection.";
+      } else if (fl.includes("sort") || fl.includes("order")) {
+        desc = "Arranges input items according to specified ordering rules.";
+      } else if (fl.includes("filter") || fl.includes("find") || fl.includes("search")) {
+        desc = "Searches input dataset and retrieves matching elements.";
+      } else if (fl.includes("connect") || fl.includes("db") || fl.includes("mongo")) {
+        desc = "Initiates and manages asynchronous database connection lifecycle.";
+      } else if (fl.includes("add") || fl.includes("sum") || fl.includes("count")) {
+        desc = "Computes mathematical or aggregate operations on arguments.";
+      } else if (fl.includes("auth") || fl.includes("login") || fl.includes("token")) {
+        desc = "Handles authentication requests, credential verification, and token issuance.";
+      }
+
+      const paramsText = paramLines.length > 0 ? paramLines.join("\n") : "None";
+
+      const jsdocParams = paramNames.length > 0
+        ? paramNames.map((p) => ` * @param {any} ${p} - Input parameter`).join("\n")
+        : " * @param {any} [args] - Function arguments";
+
+      const jsdocReturn = returnMatch ? ` * @returns {${returnType}} Returned result (\`${returnMatch[1].trim()}\`)` : " * @returns {void}";
 
       return `### \`${f}\`
 * **Type**: Function / Symbol
 * **Description**: ${desc}
 
 #### Parameters:
-${params}
+${paramsText}
 
 #### Returns:
-${returns}
+${returnDesc}
 
 \`\`\`javascript
 /**
  * Auto-generated JSDoc for ${f}
  * @description ${desc}
+${jsdocParams}
+${jsdocReturn}
  */
 \`\`\`
 ---
