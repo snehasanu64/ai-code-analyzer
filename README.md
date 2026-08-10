@@ -76,7 +76,7 @@ JWT_SECRET=your_jwt_secret_here
 JWT_EXPIRES_IN=7d
 
 # Encryption Key for Workspace Keys
-ENCRYPTION_KEY=f1957403e688c19154aa24645f404303e799e3eb375aa239c34d661c35995d93
+ENCRYPTION_KEY=your_64_char_hex_encryption_key_here
 
 # Global AI Provider Configuration (openai | gemini | claude | mock)
 AI_PROVIDER=openai
