@@ -47,8 +47,17 @@ app.use("/api/convert", conversionRoutes);
 app.use("/api/learn", learningRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/feedback", feedbackRoutes);
-app.use("/api/upload", uploadRoutes);
 app.use("/api/chat", chatRoutes);
+
+// Serve static frontend assets in production (Full-stack single server deployment)
+const frontendDist = path.join(__dirname, "../frontend/dist");
+if (require("fs").existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api/")) return next();
+    res.sendFile(path.join(frontendDist, "index.html"));
+  });
+}
 
 app.use(notFound);
 app.use(errorHandler);
