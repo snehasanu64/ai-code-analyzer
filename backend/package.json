@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "npm install && cd ../frontend && npm install && npm run build",
+    "build": "npm install --include=dev && cd ../frontend && npm install --include=dev && npm run build",
     "seed:admin": "node utils/seedAdmin.js"
   },
   "dependencies": {
