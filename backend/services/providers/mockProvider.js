@@ -814,6 +814,45 @@ function convertUniversal(code, fromLang, toLang) {
   return `// Converted from ${fromLang} to ${toLang}\n\n${out}`;
 }
 
+function convertCodeToSql(code, from) {
+  let tableLines = [];
+  let insertLines = [];
+
+  const kvRegex = /["']?([a-zA-Z0-9_/@.-]+)["']?\s*:\s*["']?([^"',}\n]+)["']?/g;
+  let m;
+  const entries = [];
+  while ((m = kvRegex.exec(code)) !== null) {
+    const rawKey = m[1];
+    const key = rawKey.replace(/^@/, "pkg_").replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
+    const val = m[2].trim();
+    if (key && val && !["name", "version", "dependencies", "devdependencies", "scripts", "type", "private"].includes(key)) {
+      entries.push({ rawKey, key, val });
+    }
+  }
+
+  if (entries.length > 0) {
+    tableLines = entries.slice(0, 10).map((e) => `    ${e.key} VARCHAR(255)`);
+    const cols = entries.slice(0, 10).map((e) => e.key).join(", ");
+    const vals = entries.slice(0, 10).map((e) => `'${e.val.replace(/'/g, "''")}'`).join(", ");
+    insertLines.push(`INSERT INTO application_dependencies (${cols})\nVALUES (${vals});`);
+  }
+
+  const columnsBlock = tableLines.length > 0 ? tableLines.join(",\n") : "    id INT PRIMARY KEY AUTO_INCREMENT,\n    item_name VARCHAR(255) NOT NULL,\n    item_value TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP";
+  const insertsBlock = insertLines.length > 0 ? insertLines.join("\n\n") : "-- Sample INSERT query\nINSERT INTO application_dependencies (item_name, item_value) VALUES ('config_setting', 'enabled');";
+
+  return `-- Auto-converted from ${from.toUpperCase() || "Source"} to SQL Schema & Queries
+
+CREATE TABLE IF NOT EXISTS application_dependencies (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+${columnsBlock}
+);
+
+${insertsBlock}
+
+-- Verification Query
+SELECT * FROM application_dependencies;`;
+}
+
 async function convertCode({ code, fromLanguage, toLanguage }) {
   const from = (fromLanguage || "").toLowerCase().trim();
   const to = (toLanguage || "").toLowerCase().trim();
@@ -821,7 +860,12 @@ async function convertCode({ code, fromLanguage, toLanguage }) {
   let convertedCode = "";
   const notes = [];
 
-  if ((from === "javascript" || from === "js") && to === "c") {
+  if (to === "sql") {
+    convertedCode = convertCodeToSql(code, from);
+    notes.push("Parsed input code attributes into relational SQL DDL CREATE TABLE schema.");
+    notes.push("Generated DML INSERT INTO statements for extracted key-value pairs.");
+    notes.push("Appended SQL SELECT query statement for execution testing.");
+  } else if ((from === "javascript" || from === "js") && to === "c") {
     convertedCode = convertJsToC(code);
     notes.push("Functions converted to C function signatures with typed parameters and int return.");
     notes.push("Top-level execution logic wrapped inside int main() block.");
