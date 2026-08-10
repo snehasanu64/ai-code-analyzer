@@ -434,8 +434,49 @@ ${jsdocReturn}
     funcDocsMarkdown = "### Code Logic Block\nNo named function signatures or class schemas were statically detected in this code. The snippet was analyzed as a single top-level executable block.\n\n* **Primary Execution**: Sequence of expressions executed sequentially.\n";
   }
 
+  let documentedCode = code;
+  if (symbols.length > 0) {
+    const blocks = symbols.map((f) => {
+      let desc = "Performs utility operations and data logic execution.";
+      let paramNames = [];
+      let returnType = "any";
+
+      const paramRegex = new RegExp(`(?:function\\s+${f}|${f}\\s*=\\s*(?:async\\s*)?\\(|def\\s+${f}\\s*\\(|class\\s+${f}|\\b\\w+\\s+${f}\\s*\\()\\s*\\(([^)]*)\\)`, "i");
+      const paramMatch = code.match(paramRegex);
+      if (paramMatch && paramMatch[1].trim()) {
+        paramNames = paramMatch[1].split(",").map((p) => p.trim().split(/[\s=:]+/)[0].trim()).filter(Boolean);
+      }
+
+      const bodyMatch = code.match(new RegExp(`(?:function\\s+${f}|def\\s+${f})[\\s\\S]*?\\{([\\s\\S]*?)\\}`, "i"));
+      const bodyText = bodyMatch ? bodyMatch[1] : code;
+      const returnMatch = bodyText.match(/return\s+([^;\n]+)/i);
+      if (returnMatch) {
+        const retExpr = returnMatch[1].trim();
+        returnType = retExpr.startsWith("[") ? "Array" : retExpr.startsWith("{") ? "Object" : retExpr === "true" || retExpr === "false" ? "boolean" : "any";
+      }
+
+      const fl = f.toLowerCase();
+      if (fl.includes("duplicate") || fl.includes("dupe")) {
+        desc = "Identifies and extracts duplicate values from the input collection.";
+      } else if (fl.includes("sort") || fl.includes("order")) {
+        desc = "Arranges input items according to specified ordering rules.";
+      } else if (fl.includes("filter") || fl.includes("find") || fl.includes("search")) {
+        desc = "Searches input dataset and retrieves matching elements.";
+      }
+
+      const jsdocParams = paramNames.length > 0
+        ? paramNames.map((p) => ` * @param {any} ${p} - Input parameter`).join("\n")
+        : " * @param {any} [args] - Function arguments";
+      const jsdocReturn = returnMatch ? ` * @returns {${returnType}} Returned result (\`${returnMatch[1].trim()}\`)` : " * @returns {void}";
+
+      return `/**\n * ${desc}\n${jsdocParams}\n${jsdocReturn}\n */`;
+    });
+    documentedCode = `${blocks.join("\n\n")}\n${code}`;
+  }
+
   return {
     docType: docType || "function",
+    documentedCode,
     markdown: documentationReport({ language, docType, funcs: symbols, funcDocsMarkdown }),
     readme: `# ${language.toUpperCase()} Code Snippet Documentation\n\n## Overview\nAuto-generated documentation for this ${language} script.\n\n## Exported Symbols\n${symbols.length ? symbols.map((s) => `- \`${s}\``).join("\n") : "- Top-level logic execution"}\n\n## Setup & Execution\nEnsure you have the target execution environment installed for ${language}.`,
   };

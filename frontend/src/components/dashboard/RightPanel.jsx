@@ -89,6 +89,46 @@ function ConversionBlock({ convertedCode, targetLanguage, onApplyConvertedCode }
   );
 }
 
+function DocumentedBlock({ documentedCode, language, onApplyConvertedCode }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (!documentedCode) return;
+    await navigator.clipboard.writeText(documentedCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="mb-6">
+      <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-2xl flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div className="text-xs font-semibold text-indigo-900 flex items-center gap-1.5">
+          <span>📄</span> Fully Documented Source Code
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={handleCopy}
+            className="px-3 py-1.5 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-medium flex items-center gap-1 shadow-sm transition-all"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <ClipboardList className="w-3.5 h-3.5 text-indigo-600" />}
+            {copied ? "Copied!" : "Copy Code"}
+          </button>
+          {onApplyConvertedCode && (
+            <button
+              onClick={() => onApplyConvertedCode(documentedCode, language)}
+              className="px-3 py-1.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl text-xs font-medium flex items-center gap-1 shadow-sm transition-all"
+              title="Replace code in workspace editor with fully documented code"
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Apply to Editor
+            </button>
+          )}
+        </div>
+      </div>
+      <CodeBlock code={documentedCode} language={language || "javascript"} />
+    </div>
+  );
+}
+
 function OptimizedBlock({ optimizedCode, language, onApplyConvertedCode }) {
   const [copied, setCopied] = useState(false);
 
@@ -168,6 +208,13 @@ function renderContent(analysis, onApplyConvertedCode) {
     case "documentation":
       return (
         <>
+          {result.documentedCode && (
+            <DocumentedBlock
+              documentedCode={result.documentedCode}
+              language={analysis.language}
+              onApplyConvertedCode={onApplyConvertedCode}
+            />
+          )}
           <Markdown markdown={result.markdown} />
           {result.readme && (
             <Block emoji="📘" title="README stub">
