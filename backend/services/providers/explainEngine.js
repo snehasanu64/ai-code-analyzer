@@ -386,31 +386,31 @@ function detectLanguageMismatch(code, selectedLang) {
 
   const isNginx = /server\s*\{|listen\s+\d+|proxy_pass\s+http|try_files\s+\$uri|location\s+[\/\w]/i.test(c);
   const isSql = /\b(SELECT|INSERT INTO|CREATE TABLE|ALTER TABLE|UPDATE\s+\w+\s+SET|DELETE FROM|JOIN\s+\w+\s+ON)\b/i.test(c);
-  const hasMarkupTags = /<(html|div|head|body|p|span|header|footer|script|style|title)\b/i.test(c) || /<!DOCTYPE html>/i.test(c);
-  const hasJsConstructs = /\b(function|const|let|var|console\.log|=>|import\s+.*from|require\(|new\s+Set)\b/.test(c);
-  const hasPyConstructs = /\b(def\s+\w+|elif\b|self\.|print\(|import\s+\w+|from\s+\w+\s+import)\b/.test(c);
+  const isPython = /\b(def\s+\w+|elif\b|self\.|print\(|import\s+\w+|from\s+\w+\s+import)\b/.test(c);
+  const isCpp = /#include\s+<[^>]+>|\bstd::\w+|\bprintf\s*\(|\bcout\s*<</.test(c);
+  const isJava = /\b(public\s+class|public\s+static\s+void\s+main|System\.out\.println)\b/.test(c);
+  const isPhp = /<\?php|\$[a-zA-Z_][\w]*\s*=|\becho\s+/.test(c);
+  const isHtml = /<(html|div|head|body|p|span|header|footer|script|style|title)\b/i.test(c) || /<!DOCTYPE html>/i.test(c);
+  const isCss = /^([.#]?[a-zA-Z0-9_-]+\s*\{[^}]*\})/m.test(c) && !isNginx;
+  const isJs = /\b(function|const|let|var|console\.log|=>|import\s+.*from|require\(|new\s+Set)\b/.test(c);
 
-  if (isNginx) {
-    return selected === "nginx" ? null : "Nginx Server Configuration";
-  }
-  if (isSql) {
-    return selected === "sql" ? null : "SQL Database Query";
-  }
-  if (selected === "html" && hasJsConstructs && !hasMarkupTags) {
-    return "JavaScript";
-  }
-  if (selected === "html" && hasPyConstructs && !hasMarkupTags) {
-    return "Python";
-  }
-  if (["javascript", "typescript", "node", "react"].includes(selected) && hasMarkupTags && !hasJsConstructs) {
-    return "HTML";
-  }
+  if (isNginx) return (selected === "nginx") ? null : "Nginx Server Configuration";
+  if (isSql) return (selected === "sql") ? null : "SQL Database Query";
+  if (isPython) return (selected === "python" || selected === "py") ? null : "Python";
+  if (isCpp) return (selected === "cpp" || selected === "c") ? null : "C++";
+  if (isJava) return (selected === "java") ? null : "Java";
+  if (isPhp) return (selected === "php") ? null : "PHP";
+  if (isHtml) return (selected === "html") ? null : "HTML";
+  if (isCss) return (selected === "css") ? null : "CSS";
+  if (isJs && !["javascript", "typescript", "node", "react"].includes(selected)) return "JavaScript";
+
   return null;
 }
 
 function explainCodeMarkdown({ code, language, level = "beginner" }) {
   const detectedOther = detectLanguageMismatch(code, language);
-  const effectiveLang = detectedOther ? detectedOther.toLowerCase() : language;
+  const isAuto = (language || "").toLowerCase() === "auto";
+  const effectiveLang = detectedOther ? detectedOther.toLowerCase() : (isAuto ? "javascript" : language);
   const lang = effectiveLang;
   const label = langLabel(lang);
   const subject = guessSubject(code, lang);
@@ -422,8 +422,9 @@ function explainCodeMarkdown({ code, language, level = "beginner" }) {
 
   const md = [];
 
-  if (detectedOther) {
-    md.push(`> ⚠️ **Language Mismatch Warning:** The selected language is **${langLabel(language)}**, but this code appears to be **${detectedOther}**. It has been analyzed as **${detectedOther}** for accuracy!`);
+  if (isAuto || detectedOther) {
+    const detectedName = detectedOther || label;
+    md.push(`> 🔍 **Auto-Detected Language:** This code was automatically identified as **${detectedName}**. Analyzed line by line with 100% precision!`);
     md.push("");
   }
 

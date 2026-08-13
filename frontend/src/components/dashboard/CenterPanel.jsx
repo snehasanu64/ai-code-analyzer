@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 
 const LANGUAGES = [
-  "javascript", "typescript", "python", "java", "c", "cpp", "php", "html", "css", "sql", "react", "node",
+  "auto", "javascript", "typescript", "python", "java", "c", "cpp", "php", "html", "css", "sql", "react", "node", "nginx",
 ];
 
 // Maps our language keys to the Monaco/highlighting language id they should actually use
@@ -182,9 +182,9 @@ export default function CenterPanel({
               <option key={t.key} value={t.key}>{t.label}</option>
             ))}
           </select>
-          <select value={language} onChange={(e) => setLanguage(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg text-xs px-2.5 py-1.5 outline-none text-gray-700 uppercase">
+          <select value={language} onChange={(e) => setLanguage(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg text-xs px-2.5 py-1.5 outline-none text-gray-700 uppercase font-medium">
             {LANGUAGES.map((l) => (
-              <option key={l} value={l}>{l}</option>
+              <option key={l} value={l}>{l === "auto" ? "🔍 AUTO DETECT" : l.toUpperCase()}</option>
             ))}
           </select>
         </div>
