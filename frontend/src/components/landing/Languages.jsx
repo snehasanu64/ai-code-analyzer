@@ -18,12 +18,7 @@ export default function Languages() {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.35, delay: i * 0.03 }}
-              style={{
-                background: "var(--card-bg, #fff)",
-                border: "1.5px solid var(--border-clr, #ddd6fe)",
-                color: "var(--text-primary, #4c1d95)",
-              }}
-              className="rounded-full px-5 py-2.5 text-sm font-mono font-semibold hover:opacity-80 transition-all shadow-sm cursor-default"
+              className="rounded-full px-4.5 py-2 text-sm font-mono font-semibold bg-slate-900/70 border border-violet-500/40 text-violet-200 hover:border-violet-400 hover:bg-violet-600/30 hover:text-white transition-all shadow-md cursor-default"
             >
               {lang}
             </motion.span>
