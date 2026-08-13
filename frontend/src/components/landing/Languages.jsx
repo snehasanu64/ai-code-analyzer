@@ -18,8 +18,9 @@ export default function Languages() {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.35, delay: i * 0.03 }}
-              className="rounded-full px-4.5 py-2 text-sm font-mono font-semibold bg-slate-900/70 border border-violet-500/40 text-violet-200 hover:border-violet-400 hover:bg-violet-600/30 hover:text-white transition-all shadow-md cursor-default"
+              className="rounded-full px-5 py-2.5 text-sm font-mono font-semibold bg-slate-900/80 border border-violet-500/40 text-violet-100 hover:border-violet-400 hover:bg-violet-600/30 hover:text-white transition-all shadow-lg hover:shadow-violet-500/20 cursor-default"
             >
+              <span className="w-2 h-2 rounded-full bg-violet-400 inline-block mr-2" />
               {lang}
             </motion.span>
           ))}
