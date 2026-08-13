@@ -137,7 +137,64 @@ const HTML_RULES = [
 ];
 
 // ---------- Generic code-pattern rules (JS / Python / Java / C-family) ----------
-const CODE_RULES = [
+// ---------- Nginx / Web Server & Database rules ----------
+  {
+    test: /^\s*server\s*\{/i,
+    explain: () => "Defines a **Server Block** in Nginx (virtual host) that configures web server routing for a domain or IP address.",
+    tips: ["Encloses all server-level routing, listening ports, and proxy rules"],
+  },
+  {
+    test: /^\s*listen\s+(\d+);?/i,
+    explain: (m) => `Instructs Nginx to listen for incoming HTTP web traffic on **Port ${m[1]}** (Port 80 is standard web traffic).`,
+    tips: ["Required for Nginx to accept public web socket requests on this port"],
+  },
+  {
+    test: /^\s*root\s+([^;]+);?/i,
+    explain: (m) => `Sets the **document root directory** to \`${m[1].trim()}\`. Static frontend assets (index.html, JS, CSS) will be served from this server path.`,
+    tips: ["Nginx directly serves pre-built production files from this directory"],
+  },
+  {
+    test: /^\s*index\s+([^;]+);?/i,
+    explain: (m) => `Configures **${m[1].trim()}** as the default file to load when a user visits the root web URL.`,
+    tips: [],
+  },
+  {
+    test: /^\s*location\s+([^\s{]+)\s*\{?/i,
+    explain: (m) => `Defines a **Location Routing Block** matching URI paths starting with \`${m[1]}\`.`,
+    tips: ["Used to split routes between static web pages and backend API endpoints"],
+  },
+  {
+    test: /^\s*try_files\s+([^;]+);?/i,
+    explain: (m) => `Configures **Single Page Application (SPA) Routing**: Nginx checks if requested file (\`$uri\`) exists; if not, falls back to \`/index.html\` so client-side React Router handles navigation cleanly!`,
+    tips: ["Prevents 404 errors when refreshing client-side React/Vue pages"],
+  },
+  {
+    test: /^\s*proxy_pass\s+([^;]+);?/i,
+    explain: (m) => `Acts as a **Reverse Proxy**: forwards all matching incoming client requests to your backend Express server running at \`${m[1].trim()}\`.`,
+    tips: ["Shields backend Node.js server from direct public exposure and handles load balancing"],
+  },
+  {
+    test: /^\s*proxy_http_version\s+([^;]+);?/i,
+    explain: (m) => `Forces Nginx to use **HTTP/${m[1].trim()}** for persistent backend proxy connections.`,
+    tips: ["Optimizes connection keep-alives between Nginx and Express"],
+  },
+  {
+    test: /^\s*proxy_set_header\s+Host\s+([^;]+);?/i,
+    explain: (m) => `Relays original **Host** header (\`${m[1].trim()}\`) from the browser down to Express so the backend knows the actual domain requested.`,
+    tips: ["Essential for domain routing and CORS headers"],
+  },
+  {
+    test: /^\s*proxy_set_header\s+X-Real-IP\s+([^;]+);?/i,
+    explain: (m) => `Passes client's real IP address (\`${m[1].trim()}\`) to backend instead of Nginx internal IP (127.0.0.1).`,
+    tips: ["Critical for rate-limiting, security logging, and user IP tracking"],
+  },
+  {
+    test: /^\s*proxy_set_header\s+([^;]+);?/i,
+    explain: (m) => `Sets proxy header \`${m[1].trim()}\` to forward client metadata to the backend API.`,
+    tips: [],
+  },
+
+  // ---------- Generic code-pattern rules (JS / Python / Java / C-family) ----------
   {
     test: /^\s*(?:const|let|var)\s+([a-zA-Z_$][\w$]*)\s*=\s*new\s+Set\([^)]*\);?\s*$/,
     explain: (m) => `Instantiates a new Hash Set \`${m[1]}\`. A Set stores unique values and provides $O(1)$ constant-time lookup (\`.has()\`) and insertion (\`.add()\`).`,
@@ -248,11 +305,15 @@ function matchRule(line, rules) {
 function genericFallback(line, language) {
   const trimmed = line.trim();
   if (!trimmed) return null;
+  if (trimmed === "}" || trimmed === "};") return "Closes the code block.";
   if (isMarkup(language)) {
-    if (/^<\/?[a-zA-Z]/.test(trimmed)) return `This line is part of the page's markup structure (\`${trimmed.slice(0, 40)}\`).`;
+    if (/^<\/?[a-zA-Z]/.test(trimmed)) return `Markup structural container element: \`${trimmed.slice(0, 40)}\`.`;
     return "Text content rendered directly on the page.";
   }
-  return `Executes a step in the program's logic: \`${trimmed.slice(0, 60)}\`.`;
+  if (language && language.toLowerCase().includes("nginx")) {
+    return `Configures Nginx web server directive: \`${trimmed.slice(0, 60)}\`.`;
+  }
+  return `Executes program statement: \`${trimmed.slice(0, 60)}\`.`;
 }
 
 const LEVEL_INTRO = {
@@ -263,7 +324,14 @@ const LEVEL_INTRO = {
 
 function buildOverview(code, language) {
   const bullets = [];
-  if (isMarkup(language)) {
+  const isNginx = /server\s*\{|listen\s+\d+|proxy_pass/i.test(code) || (language && language.toLowerCase().includes("nginx"));
+  if (isNginx) {
+    bullets.push("an Nginx HTTP virtual server listening on port 80");
+    bullets.push("static frontend document root directory serving static HTML/JS/CSS");
+    bullets.push("Single Page Application (SPA) try_files fallback routing");
+    bullets.push("a reverse proxy forwarding /api requests to an Express Node.js backend running on port 5000");
+    bullets.push("proxy headers preserving client Host and Real-IP addresses");
+  } else if (isMarkup(language)) {
     if (/<!DOCTYPE html>/i.test(code)) bullets.push("the document type");
     if (/<html[^>]*lang=/i.test(code)) bullets.push("page language");
     if (/<title>/i.test(code) || /<meta name=["']description["']/i.test(code)) bullets.push("page title and description");
@@ -285,6 +353,14 @@ function buildOverview(code, language) {
 }
 
 function buildBeginnerNotes(code, language) {
+  const isNginx = /server\s*\{|listen\s+\d+|proxy_pass/i.test(code) || (language && language.toLowerCase().includes("nginx"));
+  if (isNginx) {
+    return [
+      "**Reverse Proxying**: Nginx receives public internet requests on port 80 and safely forwards API requests to Node.js on port 5000.",
+      "**SPA Routing (`try_files`)**: Essential for React/Vue apps so refreshing routes like `/workspace` loads `index.html` instead of throwing 404 errors.",
+      "**Preserving Client IPs (`X-Real-IP`)**: Lets your Express backend log real client IP addresses for security & rate limiting."
+    ];
+  }
   if (isMarkup(language)) {
     const notes = [];
     if (/<header|<nav|<main|<footer|<section|<article/i.test(code)) {
@@ -307,10 +383,19 @@ function buildBeginnerNotes(code, language) {
 function detectLanguageMismatch(code, selectedLang) {
   const c = code.trim();
   const selected = (selectedLang || "").toLowerCase();
+
+  const isNginx = /server\s*\{|listen\s+\d+|proxy_pass\s+http|try_files\s+\$uri|location\s+[\/\w]/i.test(c);
+  const isSql = /\b(SELECT|INSERT INTO|CREATE TABLE|ALTER TABLE|UPDATE\s+\w+\s+SET|DELETE FROM|JOIN\s+\w+\s+ON)\b/i.test(c);
   const hasMarkupTags = /<(html|div|head|body|p|span|header|footer|script|style|title)\b/i.test(c) || /<!DOCTYPE html>/i.test(c);
   const hasJsConstructs = /\b(function|const|let|var|console\.log|=>|import\s+.*from|require\(|new\s+Set)\b/.test(c);
   const hasPyConstructs = /\b(def\s+\w+|elif\b|self\.|print\(|import\s+\w+|from\s+\w+\s+import)\b/.test(c);
 
+  if (isNginx) {
+    return selected === "nginx" ? null : "Nginx Server Configuration";
+  }
+  if (isSql) {
+    return selected === "sql" ? null : "SQL Database Query";
+  }
   if (selected === "html" && hasJsConstructs && !hasMarkupTags) {
     return "JavaScript";
   }
