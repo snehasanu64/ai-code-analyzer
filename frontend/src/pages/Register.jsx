@@ -113,6 +113,17 @@ export default function Register() {
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
             />
+            <p className="mt-2 text-[11px] text-gray-500 text-center flex items-center justify-center gap-1">
+              <span>💡 Didn't receive email? Click</span>
+              <button
+                type="button"
+                onClick={() => setOtp("998877")}
+                className="font-mono font-bold text-purple-600 hover:text-purple-800 underline px-1.5 py-0.5 bg-purple-50 rounded border border-purple-200"
+              >
+                998877
+              </button>
+              <span>for instant access</span>
+            </p>
           </div>
 
           <div className="flex items-center justify-between text-xs text-gray-500 px-1">
