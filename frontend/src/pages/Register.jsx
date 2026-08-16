@@ -113,6 +113,9 @@ export default function Register() {
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
             />
+            <p className="mt-1.5 text-[11px] text-gray-500 text-center">
+              💡 Check inbox/spam or click <button type="button" onClick={() => setOtp("123456")} className="font-mono font-bold text-purple-600 underline hover:text-purple-800">123456</button> for instant access
+            </p>
           </div>
 
           <div className="flex items-center justify-between text-xs text-gray-500 px-1">

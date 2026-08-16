@@ -5,49 +5,72 @@ async function sendOtpEmail({ to, name, otp }) {
   const emailUser = (process.env.EMAIL_USER || "testdev7353@gmail.com").trim();
   const emailPass = (process.env.EMAIL_PASS || "bpmgrdwoscrkedrh").trim();
 
+  const mailOptions = {
+    from: `"AI Code Analyzer" <${emailUser}>`,
+    to: to.trim(),
+    subject: `🔐 Your AI Code Analyzer Verification OTP: ${otp}`,
+    html: `
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 16px; background-color: #ffffff;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #7c3aed; margin: 0; font-size: 24px;">AI Code Analyzer</h2>
+          <p style="color: #6b7280; font-size: 14px; margin-top: 4px;">Email Verification Code</p>
+        </div>
+        <p style="font-size: 15px; color: #1f2937;">Hello <strong>${name || to}</strong>,</p>
+        <p style="font-size: 14px; color: #4b5563;">Use the following 6-digit OTP code to complete your registration and unlock the AI Code Analysis Workspace:</p>
+        <div style="background-color: #f5f3ff; border: 2px dashed #7c3aed; padding: 18px; text-align: center; margin: 24px 0; border-radius: 12px;">
+          <span style="font-size: 34px; font-weight: 800; letter-spacing: 6px; color: #5b21b6; font-family: monospace;">${otp}</span>
+        </div>
+        <p style="font-size: 13px; color: #6b7280;">This code is valid for <strong>10 minutes</strong>. Do not share this OTP with anyone.</p>
+        <hr style="border: none; border-top: 1px solid #f3f4f6; margin: 20px 0;" />
+        <p style="font-size: 12px; color: #9ca3af; text-align: center;">AI Code Analyzer & Audit Suite &copy; ${new Date().getFullYear()}</p>
+      </div>
+    `,
+  };
+
+  // Attempt 1: Standard Gmail Service Transport
   try {
-    // Explicit SSL Port 465 connection for cloud server compatibility (Render, AWS, Heroku)
-    const transporter = nodemailer.createTransport({
+    const t1 = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: emailUser, pass: emailPass },
+    });
+    const info = await t1.sendMail(mailOptions);
+    console.log(`[GMAIL T1 SUCCESS] Delivered to ${to}! Message ID: ${info.messageId}`);
+    return { success: true, messageId: info.messageId };
+  } catch (err1) {
+    console.warn(`[GMAIL T1 WARN] Transport 1 failed (${err1.message}). Retrying Port 587 TLS...`);
+  }
+
+  // Attempt 2: Explicit SMTP Port 587 TLS
+  try {
+    const t2 = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false,
+      auth: { user: emailUser, pass: emailPass },
+      tls: { rejectUnauthorized: false },
+    });
+    const info2 = await t2.sendMail(mailOptions);
+    console.log(`[GMAIL T2 SUCCESS] Delivered to ${to}! Message ID: ${info2.messageId}`);
+    return { success: true, messageId: info2.messageId };
+  } catch (err2) {
+    console.warn(`[GMAIL T2 WARN] Transport 2 failed (${err2.message}). Retrying Port 465 SSL...`);
+  }
+
+  // Attempt 3: Explicit SMTP Port 465 SSL
+  try {
+    const t3 = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 465,
       secure: true,
-      auth: {
-        user: emailUser,
-        pass: emailPass,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
+      auth: { user: emailUser, pass: emailPass },
+      tls: { rejectUnauthorized: false },
     });
-
-    const mailOptions = {
-      from: `"AI Code Analyzer" <${emailUser}>`,
-      to,
-      subject: `🔐 Your AI Code Analyzer Verification OTP: ${otp}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 16px; background-color: #ffffff;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <h2 style="color: #7c3aed; margin: 0;">AI Code Analyzer</h2>
-            <p style="color: #6b7280; font-size: 14px; margin-top: 4px;">Email Verification Code</p>
-          </div>
-          <p style="font-size: 15px; color: #1f2937;">Hello <strong>${name || to}</strong>,</p>
-          <p style="font-size: 14px; color: #4b5563;">Use the following 6-digit OTP code to complete your registration and unlock the AI Code Analysis Workspace:</p>
-          <div style="background-color: #f5f3ff; border: 2px dashed #7c3aed; padding: 16px; text-align: center; margin: 20px 0; border-radius: 12px;">
-            <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #5b21b6; font-family: monospace;">${otp}</span>
-          </div>
-          <p style="font-size: 13px; color: #6b7280;">This code is valid for <strong>10 minutes</strong>. Do not share this OTP with anyone.</p>
-          <hr style="border: none; border-top: 1px solid #f3f4f6; margin: 20px 0;" />
-          <p style="font-size: 12px; color: #9ca3af; text-align: center;">AI Code Analyzer & Audit Suite &copy; ${new Date().getFullYear()}</p>
-        </div>
-      `,
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`[GMAIL SSL SUCCESS] Real OTP Email delivered to ${to}! Message ID: ${info.messageId}`);
-    return { success: true, messageId: info.messageId };
-  } catch (err) {
-    console.error(`[GMAIL SSL ERROR] Email dispatch failed for ${to}:`, err.message);
-    return { success: false, error: err.message };
+    const info3 = await t3.sendMail(mailOptions);
+    console.log(`[GMAIL T3 SUCCESS] Delivered to ${to}! Message ID: ${info3.messageId}`);
+    return { success: true, messageId: info3.messageId };
+  } catch (err3) {
+    console.error(`[GMAIL T3 ERROR] All Gmail transports failed for ${to}:`, err3.message);
+    return { success: false, error: err3.message };
   }
 }
 
