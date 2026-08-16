@@ -1,13 +1,30 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import {
   Upload, Download, Copy, Check, BookOpenText, Bug, Zap, FileText,
-  BarChart3, ShieldCheck, Repeat, GraduationCap, TerminalSquare, Play, Loader2,
+  BarChart3, ShieldCheck, Repeat, GraduationCap, TerminalSquare, Play, Loader2, Wand2,
 } from "lucide-react";
 
 const LANGUAGES = [
   "auto", "javascript", "typescript", "python", "java", "c", "cpp", "php", "html", "css", "sql", "react", "node", "nginx",
 ];
+
+const LANG_DISPLAY_MAP = {
+  auto: "🔍 AUTO DETECT",
+  cpp: "C++",
+  c: "C",
+  javascript: "JAVASCRIPT",
+  typescript: "TYPESCRIPT",
+  python: "PYTHON",
+  java: "JAVA",
+  php: "PHP",
+  html: "HTML",
+  css: "CSS",
+  sql: "SQL",
+  react: "REACT",
+  node: "NODE",
+  nginx: "NGINX",
+};
 
 // Maps our language keys to the Monaco/highlighting language id they should actually use
 const MONACO_LANG_MAP = { react: "javascript", node: "javascript" };
@@ -99,8 +116,75 @@ export default function CenterPanel({
   targetLanguage, setTargetLanguage, selectedAction, setSelectedAction, onRun, loading,
 }) {
   const fileInputRef = useRef(null);
+  const editorRef = useRef(null);
   const [copied, setCopied] = useState(false);
+  const [formatted, setFormatted] = useState(false);
   const [theme, setTheme] = useState("obsidian-dark");
+
+  const handleEditorDidMount = (editor) => {
+    editorRef.current = editor;
+  };
+
+  useEffect(() => {
+    const sessionCode = sessionStorage.getItem("workspace_initial_code");
+    if (sessionCode) {
+      sessionStorage.removeItem("workspace_initial_code");
+      setCode(sessionCode);
+    }
+  }, [setCode]);
+
+  const handleFormatCode = () => {
+    if (!code || !code.trim()) return;
+
+    if (editorRef.current) {
+      try {
+        const action = editorRef.current.getAction("editor.action.formatDocument");
+        if (action) {
+          action.run();
+          setFormatted(true);
+          setTimeout(() => setFormatted(false), 1500);
+          return;
+        }
+      } catch (e) {}
+    }
+
+    try {
+      if (language === "json" || code.trim().startsWith("{") || code.trim().startsWith("[")) {
+        try {
+          const parsed = JSON.parse(code);
+          setCode(JSON.stringify(parsed, null, 2));
+          setFormatted(true);
+          setTimeout(() => setFormatted(false), 1500);
+          return;
+        } catch (e) {}
+      }
+
+      const lines = code.split("\n");
+      let indentLevel = 0;
+      const formattedLines = lines.map((line) => {
+        let trimmed = line.trim();
+        if (!trimmed) return "";
+
+        if (/^[}\])]/.test(trimmed)) {
+          indentLevel = Math.max(0, indentLevel - 1);
+        }
+
+        const indentedLine = "  ".repeat(indentLevel) + trimmed;
+
+        if (/[{[(]\s*$/.test(trimmed) || /^(function|if|for|while|class|def|server\s*\{|location)\b.*[^}]*$/i.test(trimmed)) {
+          indentLevel += 1;
+        }
+
+        return indentedLine;
+      });
+
+      setCode(formattedLines.join("\n"));
+      setFormatted(true);
+      setTimeout(() => setFormatted(false), 1500);
+    } catch (err) {
+      console.error("Format error:", err);
+    }
+  };
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -184,7 +268,7 @@ export default function CenterPanel({
           </select>
           <select value={language} onChange={(e) => setLanguage(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg text-xs px-2.5 py-1.5 outline-none text-gray-700 uppercase font-medium">
             {LANGUAGES.map((l) => (
-              <option key={l} value={l}>{l === "auto" ? "🔍 AUTO DETECT" : l.toUpperCase()}</option>
+              <option key={l} value={l}>{LANG_DISPLAY_MAP[l] || l.toUpperCase()}</option>
             ))}
           </select>
         </div>
@@ -203,6 +287,7 @@ export default function CenterPanel({
             theme={theme}
             value={code}
             beforeMount={defineCustomThemes}
+            onMount={handleEditorDidMount}
             onChange={(v) => setCode(v || "")}
             options={{
               fontFamily: "JetBrains Mono, monospace",
@@ -215,7 +300,15 @@ export default function CenterPanel({
             }}
           />
         </div>
-        <div className="flex items-center justify-end gap-1 pt-1.5 shrink-0">
+        <div className="flex items-center justify-end gap-1.5 pt-1.5 shrink-0">
+          <button
+            onClick={handleFormatCode}
+            className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all"
+            title="Auto-format and beautify code indentation"
+          >
+            <Wand2 className="w-3.5 h-3.5 text-purple-600" />
+            <span>{formatted ? "Formatted!" : "Format Code"}</span>
+          </button>
           <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-lg hover:bg-gray-100" title="Upload file">
             <Upload className="w-4 h-4 text-gray-500" />
           </button>
@@ -254,9 +347,9 @@ export default function CenterPanel({
         {selectedAction === "conversion" && (
           <div className="mb-3 flex items-center gap-3">
             <span className="text-xs font-medium text-gray-600 shrink-0 w-24">Convert to:</span>
-            <select value={targetLanguage} onChange={(e) => setTargetLanguage(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg text-xs px-2.5 py-2 outline-none text-gray-700">
-              {LANGUAGES.map((l) => (
-                <option key={l} value={l}>{l}</option>
+            <select value={targetLanguage} onChange={(e) => setTargetLanguage(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg text-xs px-2.5 py-2 outline-none text-gray-700 font-medium">
+              {LANGUAGES.filter((l) => l !== "auto").map((l) => (
+                <option key={l} value={l}>{LANG_DISPLAY_MAP[l] || l.toUpperCase()}</option>
               ))}
             </select>
           </div>

@@ -8,7 +8,14 @@ import Navbar from "../components/shared/Navbar.jsx";
 
 export default function Landing() {
   return (
-    <div className="min-h-screen">
+    <div
+      style={{
+        background: "var(--bg-base)",
+        color: "var(--text-primary)",
+        transition: "background-color 0.3s ease, color 0.3s ease",
+      }}
+      className="min-h-screen"
+    >
       <Navbar />
       <main>
         <Hero />

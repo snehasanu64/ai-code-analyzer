@@ -10,7 +10,6 @@ const QUICK_PROMPTS = [
   "SQL Query with JOIN & WHERE",
 ];
 
-// Fallback code responses for instant offline / sandbox demo
 const STATIC_CODE_RESPONSES = {
   counter: `// React Counter Component
 import { useState } from "react";
@@ -44,7 +43,6 @@ lines = read_and_parse_file("data.txt")`,
 const express = require("express");
 const router = express.Router();
 
-// GET /api/users - Fetch user list
 router.get("/users", async (req, res) => {
   try {
     const users = [
@@ -80,7 +78,7 @@ export default function CodeChatbot() {
   const [messages, setMessages] = useState([
     {
       sender: "ai",
-      text: "👋 Hi! I'm your AI Code Generator. Ask me to generate code in any programming language!",
+      text: "👋 Hi! I'm your AI Code Assistant. Ask me to generate or explain code in any language!",
       code: null
     }
   ]);
@@ -99,55 +97,42 @@ export default function CodeChatbot() {
     const query = (userPrompt || input).trim();
     if (!query || loading) return;
 
-    // Add user message
-    const newMessages = [...messages, { sender: "user", text: query, code: null }];
-    setMessages(newMessages);
+    const userMsg = { sender: "user", text: query };
+    setMessages((prev) => [...prev, userMsg]);
     if (!userPrompt) setInput("");
     setLoading(true);
 
-    try {
-      // Check static offline matches first
-      const lower = query.toLowerCase();
-      let generatedCode = "";
-      let explanation = "";
+    const qLower = query.toLowerCase();
+    let codeResult = null;
+    let textResult = "Here is the code snippet generated for your request:";
 
-      if (lower.includes("counter") && lower.includes("react")) {
-        generatedCode = STATIC_CODE_RESPONSES.counter;
-        explanation = "Here is a clean React Counter component using state hooks:";
-      } else if (lower.includes("file reader") || lower.includes("python parser")) {
-        generatedCode = STATIC_CODE_RESPONSES.python;
-        explanation = "Here is a Python file reader function with error handling:";
-      } else {
-        // Call backend /chat/generate endpoint for dynamic code generation
-        try {
-          const { data } = await api.post("/chat/generate", { prompt: query });
-          generatedCode = data.code || `// Generated solution for: ${query}\nfunction solution() {\n  return true;\n}`;
-          explanation = data.text || `Generated code snippet for "${query}":`;
-        } catch (err) {
-          console.error("Chatbot API error:", err);
-          generatedCode = `// Generated Code Snippet for: ${query}\nfunction solution() {\n  console.log("Executing logic for: ${query}");\n  return true;\n}`;
-          explanation = `Here is a code template for "${query}":`;
+    if (qLower.includes("react") || qLower.includes("counter")) {
+      codeResult = STATIC_CODE_RESPONSES.counter;
+    } else if (qLower.includes("python") || qLower.includes("file") || qLower.includes("reader")) {
+      codeResult = STATIC_CODE_RESPONSES.python;
+    } else if (qLower.includes("express") || qLower.includes("api") || qLower.includes("route")) {
+      codeResult = STATIC_CODE_RESPONSES.express;
+    } else if (qLower.includes("sql") || qLower.includes("join") || qLower.includes("query")) {
+      codeResult = STATIC_CODE_RESPONSES.sql;
+    }
+
+    try {
+      if (!codeResult) {
+        const { data } = await api.post("/chat/generate", { prompt: query });
+        if (data && (data.code || data.text)) {
+          textResult = data.text || textResult;
+          codeResult = data.code || null;
         }
       }
-
-      setMessages([
-        ...newMessages,
-        {
-          sender: "ai",
-          text: explanation,
-          code: generatedCode
-        }
-      ]);
-    } catch {
-      setMessages([
-        ...newMessages,
-        {
-          sender: "ai",
-          text: "Sorry, I couldn't generate that code snippet. Please try another prompt!",
-          code: null
-        }
-      ]);
+    } catch (err) {
+      if (!codeResult) {
+        codeResult = `// Generated solution for: ${query}\nfunction processRequest() {\n  return { success: true };\n}`;
+      }
     } finally {
+      setMessages((prev) => [
+        ...prev,
+        { sender: "ai", text: textResult, code: codeResult },
+      ]);
       setLoading(false);
     }
   };
@@ -176,8 +161,8 @@ export default function CodeChatbot() {
                   <Sparkles className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-display font-bold text-sm leading-tight">AI Code Generator</h3>
-                  <p className="text-[10px] text-violet-100">Home Assistant · Instant Code Snippets</p>
+                  <h3 className="font-display font-bold text-sm leading-tight">AI Code Assistant</h3>
+                  <p className="text-[10px] text-violet-100">Instant Code Generation & Guidance</p>
                 </div>
               </div>
               <button
@@ -251,7 +236,7 @@ export default function CodeChatbot() {
               {loading && (
                 <div className="flex items-center gap-2 text-xs text-gray-400">
                   <RefreshCw className="w-3.5 h-3.5 animate-spin text-violet-600" />
-                  <span>Generating code...</span>
+                  <span>Generating response...</span>
                 </div>
               )}
               <div ref={messagesEndRef} />

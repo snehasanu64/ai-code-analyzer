@@ -138,6 +138,104 @@ const HTML_RULES = [
 
 // ---------- Generic code-pattern rules (JS / Python / Java / C-family) ----------
 // ---------- Nginx / Web Server & Database rules ----------
+const CODE_RULES = [
+  // ---------- Shell / Terminal / CLI & Package Manager rules ----------
+  {
+    test: /^\s*pm2\s+start\s+([^\s]+)(?:\s+--name\s+([^\s]+))?/i,
+    explain: (m) => m[2]
+      ? `Launches Node.js script \`${m[1]}\` under PM2 process manager as a continuous background daemon named **${m[2]}**.`
+      : `Launches Node.js script \`${m[1]}\` under PM2 process manager as a background daemon process.`,
+    tips: ["Keeps application running continuously in production and auto-restarts on server crashes"],
+  },
+  {
+    test: /^\s*pm2\s+save\b/i,
+    explain: () => "Saves current active PM2 process list snapshot to disk so all running background applications auto-restore across server reboots.",
+    tips: ["Ensures backend services resume automatically after server restarts"],
+  },
+  {
+    test: /^\s*pm2\s+startup\b/i,
+    explain: () => "Generates and configures system boot startup scripts (systemd / init.d) to launch PM2 daemon automatically when the server boots up.",
+    tips: ["Essential setup command for production Node.js servers"],
+  },
+  {
+    test: /^\s*pm2\s+(stop|restart|delete|reload|list|status|logs)\b(?:\s+([^\n]+))?/i,
+    explain: (m) => `Executes PM2 command **pm2 ${m[1]}**${m[2] ? ` on target \`${m[2].trim()}\`` : ""}: manages background daemon process lifecycle.`,
+    tips: [],
+  },
+  {
+    test: /^\s*systemctl\s+(start|stop|restart|enable|disable|status)\s+([^\s]+)/i,
+    explain: (m) => `Executes systemd service command **systemctl ${m[1]} ${m[2]}**: manages Linux background service \`${m[2]}\`.`,
+    tips: ["Controls system services like nginx, mongodb, mysql, or postgresql"],
+  },
+  {
+    test: /^\s*service\s+([^\s]+)\s+(start|stop|restart|status)/i,
+    explain: (m) => `Executes SysV init service command **service ${m[1]} ${m[2]}**: manages background system service \`${m[1]}\`.`,
+    tips: [],
+  },
+  {
+    test: /^\s*npm\s+(?:install|i)(?:\s+([^\n]+))?/i,
+    explain: (m) => m[1] && m[1].trim()
+      ? `Runs **npm install ${m[1].trim()}**: downloads and installs package \`${m[1].trim()}\` into \`node_modules\` and registers it in \`package.json\`.`
+      : "Runs **npm install**: reads \`package.json\` and installs all project dependency packages into your local \`node_modules\` folder.",
+    tips: ["Essential command when pulling or cloning a Node.js project from GitHub"],
+  },
+  {
+    test: /^\s*npm\s+run\s+build\b/i,
+    explain: () => "Runs **npm run build**: executes the production compilation script (e.g. `vite build` or `next build`), bundling, minifying, and optimizing source code into production assets inside `dist/` or `build/`.",
+    tips: ["Generates production-ready static assets for deployment to Render, Vercel, or Netlify"],
+  },
+  {
+    test: /^\s*npm\s+run\s+(dev|start|serve)\b/i,
+    explain: (m) => `Runs **npm run ${m[1]}**: starts local development server on your machine with Hot Module Replacement (HMR) for real-time code previewing.`,
+    tips: ["Runs locally on dev ports like http://localhost:5173 or http://localhost:3000"],
+  },
+  {
+    test: /^\s*npm\s+run\s+([^\s]+)/i,
+    explain: (m) => `Runs **npm run ${m[1]}**: executes custom script \`${m[1]}\` defined under \`package.json\`.`,
+    tips: [],
+  },
+  {
+    test: /^\s*npx\s+([^\s]+)(?:\s+([^\n]+))?/i,
+    explain: (m) => `Executes **npx ${m[1]}**: runs an npm package binary directly from the npm registry without needing permanent global installation.`,
+    tips: ["Used for CLI generators like create-react-app, create-vite, or prisma"],
+  },
+  {
+    test: /^\s*git\s+(commit|add|push|pull|checkout|clone|status|branch|merge)(?:\s+([^\n]+))?/i,
+    explain: (m) => {
+      const cmd = m[1].toLowerCase();
+      const rest = m[2] ? ` ${m[2].trim()}` : "";
+      if (cmd === "add") return `**git add${rest}**: stages file changes into the Git index, preparing them for the next commit snapshot.`;
+      if (cmd === "commit") return `**git commit${rest}**: creates a permanent version snapshot of all staged changes in your local Git history.`;
+      if (cmd === "push") return `**git push${rest}**: uploads local Git commits to the remote repository (e.g. GitHub, GitLab).`;
+      if (cmd === "pull") return `**git pull${rest}**: fetches and merges latest updates from the remote Git repository into your local branch.`;
+      if (cmd === "clone") return `**git clone${rest}**: downloads a complete copy of a remote Git repository onto your local computer.`;
+      if (cmd === "checkout") return `**git checkout${rest}**: switches active Git branch or restores files to a previous commit state.`;
+      return `Executes Git version control command: \`git ${cmd}${rest}\`.`;
+    },
+    tips: ["Standard software engineering workflow for tracking code history"],
+  },
+  {
+    test: /^\s*pip\s+(?:install|uninstall)(?:\s+([^\n]+))?/i,
+    explain: (m) => `Runs **pip install**: downloads Python packages from PyPI registry into your Python environment.`,
+    tips: ["Installs third-party Python libraries like flask, pandas, or requests"],
+  },
+  {
+    test: /^\s*docker\s+(run|build|compose|exec|ps|stop)(?:\s+([^\n]+))?/i,
+    explain: (m) => `Runs Docker container command **docker ${m[1]}**: manages containerized application execution environments.`,
+    tips: ["Ensures application runs identically across local development and cloud production servers"],
+  },
+  {
+    test: /^\s*(cd|ls|mkdir|rm|cp|mv|cat|pwd)\s*(.*)/i,
+    explain: (m) => {
+      const c = m[1].toLowerCase();
+      if (c === "cd") return `Changes active shell terminal directory to \`${m[2].trim() || "~"}\`.`;
+      if (c === "ls") return "Lists all files and sub-directories inside the current working directory.";
+      if (c === "mkdir") return `Creates a new directory folder named \`${m[2].trim()}\`.`;
+      if (c === "rm") return `Deletes target file or directory \`${m[2].trim()}\`.`;
+      return `Executes terminal command: \`${m[1]} ${m[2].trim()}\`.`;
+    },
+    tips: [],
+  },
   {
     test: /^\s*server\s*\{/i,
     explain: () => "Defines a **Server Block** in Nginx (virtual host) that configures web server routing for a domain or IP address.",
@@ -197,23 +295,23 @@ const HTML_RULES = [
   // ---------- Generic code-pattern rules (JS / Python / Java / C-family) ----------
   {
     test: /^\s*(?:const|let|var)\s+([a-zA-Z_$][\w$]*)\s*=\s*new\s+Set\([^)]*\);?\s*$/,
-    explain: (m) => `Instantiates a new Hash Set \`${m[1]}\`. A Set stores unique values and provides $O(1)$ constant-time lookup (\`.has()\`) and insertion (\`.add()\`).`,
+    explain: (m) => `Instantiates a new Hash Set \`${m[1]}\`. A Set stores unique values and provides \`O(1)\` constant-time lookup (\`.has()\`) and insertion (\`.add()\`).`,
     tips: [
-      "Using a Set instead of an Array for lookup prevents $O(n)$ linear scans on every iteration",
-      "Memory footprint scales with unique items $O(u)$"
+      "Using a Set instead of an Array for lookup prevents `O(n)` linear scans on every iteration",
+      "Memory footprint scales with unique items `O(u)`"
     ],
   },
   {
     test: /^\s*(?:const|let|var)\s+([a-zA-Z_$][\w$]*)\s*=\s*\[\];?\s*$/,
     explain: (m) => `Initializes an empty array \`${m[1]}\` to collect and store results as elements are processed.`,
-    tips: ["Initializes empty storage in $O(1)$ time"],
+    tips: ["Initializes empty storage in `O(1)` time"],
   },
   {
     test: /\?\s*([^:]+)\s*:\s*(.+);?\s*$/,
     explain: (m) => `Uses a **ternary conditional expression**: checks the condition before the \`?\`. If true, executes the first branch; otherwise executes the second branch.`,
     tips: [
       "Provides concise conditional logic in a single line",
-      "Executes in $O(1)$ time"
+      "Executes in `O(1)` time"
     ],
   },
   {
@@ -279,7 +377,7 @@ const HTML_RULES = [
   },
   {
     test: /\.(append|push)\(([^)]*)\)/,
-    explain: (m) => `Appends \`${m[2].trim() || "element"}\` onto the tail of the array in $O(1)$ amortized time.`,
+    explain: (m) => `Appends \`${m[2].trim() || "element"}\` onto the tail of the array in \`O(1)\` amortized time.`,
     tips: ["Mutates the array length in-place"],
   },
   {
@@ -305,7 +403,8 @@ function matchRule(line, rules) {
 function genericFallback(line, language) {
   const trimmed = line.trim();
   if (!trimmed) return null;
-  if (trimmed === "}" || trimmed === "};") return "Closes the code block.";
+  if (trimmed === "}" || trimmed === "};" || trimmed === ")") return "Closes the code block.";
+
   if (isMarkup(language)) {
     if (/^<\/?[a-zA-Z]/.test(trimmed)) return `Markup structural container element: \`${trimmed.slice(0, 40)}\`.`;
     return "Text content rendered directly on the page.";
@@ -313,7 +412,29 @@ function genericFallback(line, language) {
   if (language && language.toLowerCase().includes("nginx")) {
     return `Configures Nginx web server directive: \`${trimmed.slice(0, 60)}\`.`;
   }
-  return `Executes program statement: \`${trimmed.slice(0, 60)}\`.`;
+
+  // Parse CLI command lines dynamically: e.g. "pm2 start server.js --name backend"
+  const cliMatch = trimmed.match(/^([a-zA-Z0-9_.-]+)\s+([a-zA-Z0-9_.-]+)?(?:\s+(.+))?/);
+  if (cliMatch && !/[=();{}]/.test(trimmed)) {
+    const mainCmd = cliMatch[1];
+    const subCmd = cliMatch[2] || "";
+    const args = cliMatch[3] ? ` (with arguments \`${cliMatch[3].trim()}\`)` : "";
+    return `Executes CLI command **${mainCmd}**${subCmd ? ` action **${subCmd}**` : ""}${args}.`;
+  }
+
+  // Parse code assignments: e.g. "var = val"
+  if (trimmed.includes("=")) {
+    const [left, ...right] = trimmed.split("=");
+    return `Assigns value \`${right.join("=").trim()}\` to variable \`${left.trim()}\`.`;
+  }
+
+  // Parse function calls: e.g. "foo(bar)"
+  const fnCall = trimmed.match(/^([a-zA-Z0-9_$.]+)\s*\(([^)]*)\)/);
+  if (fnCall) {
+    return `Invokes method/function \`${fnCall[1]}\`${fnCall[2].trim() ? ` passing arguments \`${fnCall[2].trim()}\`` : " with no arguments"}.`;
+  }
+
+  return `Executes statement: \`${trimmed.slice(0, 60)}\`.`;
 }
 
 const LEVEL_INTRO = {
@@ -384,6 +505,7 @@ function detectLanguageMismatch(code, selectedLang) {
   const c = code.trim();
   const selected = (selectedLang || "").toLowerCase();
 
+  const isTerminal = /^\s*(npm|git|pip|docker|npx|yarn|pnpm|bun|cd|mkdir|curl|wget)\b/im.test(c);
   const isNginx = /server\s*\{|listen\s+\d+|proxy_pass\s+http|try_files\s+\$uri|location\s+[\/\w]/i.test(c);
   const isSql = /\b(SELECT|INSERT INTO|CREATE TABLE|ALTER TABLE|UPDATE\s+\w+\s+SET|DELETE FROM|JOIN\s+\w+\s+ON)\b/i.test(c);
   const isPython = /\b(def\s+\w+|elif\b|self\.|print\(|import\s+\w+|from\s+\w+\s+import)\b/.test(c);
@@ -394,6 +516,7 @@ function detectLanguageMismatch(code, selectedLang) {
   const isCss = /^([.#]?[a-zA-Z0-9_-]+\s*\{[^}]*\})/m.test(c) && !isNginx;
   const isJs = /\b(function|const|let|var|console\.log|=>|import\s+.*from|require\(|new\s+Set)\b/.test(c);
 
+  if (isTerminal) return (selected === "bash" || selected === "shell") ? null : "Terminal / Shell Commands";
   if (isNginx) return (selected === "nginx") ? null : "Nginx Server Configuration";
   if (isSql) return (selected === "sql") ? null : "SQL Database Query";
   if (isPython) return (selected === "python" || selected === "py") ? null : "Python";
@@ -458,15 +581,16 @@ function explainCodeMarkdown({ code, language, level = "beginner" }) {
     const matched = matchRule(line, rules);
     const explanation = matched ? matched.explanation : genericFallback(line, lang);
     if (!explanation) continue;
-    md.push("```" + (["reactjs", "nodejs", "react", "node"].includes(lang) ? "javascript" : lang) + "");
-    md.push(line.trim());
-    md.push("```");
     md.push(`**${n}.** ${explanation}`);
     if (matched && matched.tips.length && level !== "expert") {
       md.push("");
       md.push("✅ **Why it matters:**");
       matched.tips.forEach((t) => md.push(`- ${t}`));
     }
+    md.push("");
+    md.push("```" + (["reactjs", "nodejs", "react", "node"].includes(lang) ? "javascript" : lang) + "");
+    md.push(line.trim());
+    md.push("```");
     md.push("");
   }
   if (truncated) {

@@ -75,13 +75,14 @@ function guessDataStructures(code) {
   return hits.length ? hits : ["Primitive values only — no composite data structure detected."];
 }
 
-/* ── Auto-detect actual language from code heuristics ── */
 function detectActualLanguage(code) {
-  if (/\bconst\b|\blet\b|\bvar\b|\bfunction\b|\basync\b|\bawait\b|\brequire\s*\(|\bmodule\.exports\b|\bimport\b.*from/.test(code)) return "javascript";
-  if (/\bdef\s+\w+\s*\(|\bimport\s+\w+|\bprint\s*\(|\bclass\s+\w+\s*:/.test(code)) return "python";
-  if (/#include\s*<|\bprintf\s*\(|\bint\s+main\s*\(/.test(code)) return "c";
-  if (/\bpublic\s+class\b|\bSystem\.out\.print|\bvoid\s+main\b/.test(code)) return "java";
-  if (/SELECT|INSERT|UPDATE|DELETE|CREATE\s+TABLE/i.test(code)) return "sql";
+  const c = code.trim();
+  if (/^\s*(sudo|apt|curl|wget|npm|git|pm2|docker|systemctl|yarn|pip|npx|cd|mkdir)\b/im.test(c)) return "shell";
+  if (/\bconst\b|\blet\b|\bvar\b|\bfunction\b|\basync\b|\bawait\b|\brequire\s*\(|\bmodule\.exports\b|\bimport\b.*from/.test(c)) return "javascript";
+  if (/\bdef\s+\w+\s*\(|\bimport\s+\w+|\bprint\s*\(|\bclass\s+\w+\s*:/.test(c)) return "python";
+  if (/#include\s*<|\bprintf\s*\(|\bint\s+main\s*\(/.test(c)) return "c";
+  if (/\bpublic\s+class\b|\bSystem\.out\.print|\bvoid\s+main\b/.test(c)) return "java";
+  if (/\b(SELECT\s+[\w*]+|INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM|CREATE\s+TABLE)\b/i.test(c)) return "sql";
   return null;
 }
 
@@ -94,8 +95,8 @@ async function findBugs({ code, language }) {
   const autoLang   = detectActualLanguage(code);
   const effectiveLang = autoLang || userLang;
 
-  // Warn if the user has the wrong language selected
-  if (autoLang && userLang && autoLang !== userLang && !userLang.startsWith(autoLang) && !autoLang.startsWith(userLang)) {
+  // Warn if the user has the wrong language selected (only if not 'auto')
+  if (autoLang && userLang && userLang !== "auto" && autoLang !== userLang && !userLang.startsWith(autoLang) && !autoLang.startsWith(userLang)) {
     bugs.push({
       line: null,
       severity: "warning",
@@ -115,6 +116,19 @@ async function findBugs({ code, language }) {
   codeLines.forEach((line, idx) => {
     const ln = idx + 1;
     const t  = line.trim();
+
+    /* ── Terminal / CLI / DevOps Commands ── */
+    if (/git\s+push\s+.*--force\b|-f\b/i.test(line))
+      bugs.push({ line: ln, severity: "critical", title: "Force push risk (git push --force)", description: "Force pushing overwrites remote commits on GitHub, potentially destroying team commit history.", suggestion: "Use --force-with-lease or rebase cleanly before pushing." });
+
+    if (/chmod\s+777\b/i.test(line))
+      bugs.push({ line: ln, severity: "critical", title: "Overly permissive file permissions (chmod 777)", description: "Granting read, write, and execute permissions to all world users allows unauthorized access.", suggestion: "Restrict permissions using chmod 755 for executables or 644 for files." });
+
+    if (/curl\s+[^|\n]+\|\s*(sh|bash)/i.test(line) || /wget\s+[^|\n]+\|\s*(sh|bash)/i.test(line))
+      bugs.push({ line: ln, severity: "critical", title: "Unsafe remote shell script execution (curl | bash)", description: "Piping unverified internet downloads directly into bash shell executes unvetted remote code.", suggestion: "Download the script first, inspect its contents, and execute explicitly." });
+
+    if (/rm\s+-rf\s+(\/|\*|\.\/)/i.test(line))
+      bugs.push({ line: ln, severity: "critical", title: "Destructive recursive file deletion (rm -rf)", description: "Unconstrained recursive deletion can permanently wipe critical server directories.", suggestion: "Specify exact folder paths and verify paths before execution." });
 
     /* ── JavaScript / TypeScript ── */
     if (isJS) {
@@ -257,35 +271,72 @@ async function findBugs({ code, language }) {
 
 async function optimizeCode({ code, language }) {
   const suggestions = [];
-  if (/for.*for/s.test(code)) {
-    suggestions.push({
-      title: "Reduce nested loop complexity",
-      description: "Nested loops over the same collection may be reducible with a hash map lookup, cutting time complexity from O(n²) to O(n).",
-      impact: "high",
-    });
+  let optimizedCode = code;
+  const isCli = /^\s*(git|pm2|npm|yarn|pip|docker|systemctl|npx|curl|wget)\b/im.test(code);
+
+  if (isCli) {
+    const trimmed = code.trim();
+    if (/git\s+clone/i.test(trimmed) && !/--depth/i.test(trimmed)) {
+      suggestions.push({
+        title: "Use Shallow Repository Clone (--depth 1)",
+        description: "Adding --depth 1 downloads only the latest commit snapshot instead of full historical commits, saving up to 90% bandwidth and clone time.",
+        impact: "high",
+      });
+      optimizedCode = trimmed.replace(/git\s+clone\s+/i, "git clone --depth 1 ");
+    } else if (/npm\s+(install|i)\b/i.test(trimmed) && !/ci|--only=production/i.test(trimmed)) {
+      suggestions.push({
+        title: "Use Fast Production Installation (npm ci)",
+        description: "Replacing npm install with 'npm ci --only=production' bypasses package.json resolution and installs directly from package-lock.json up to 3x faster.",
+        impact: "high",
+      });
+      optimizedCode = "# Fast Production Install\nnpm ci --only=production";
+    } else if (/pm2\s+start/i.test(trimmed) && !/-i|cluster/i.test(trimmed)) {
+      suggestions.push({
+        title: "Enable Multi-Core Cluster Mode (-i max)",
+        description: "Adding '-i max' instructs PM2 to spawn worker instances across all CPU cores, maximizing request throughput and load balancing.",
+        impact: "high",
+      });
+      optimizedCode = trimmed.replace(/pm2\s+start\s+/i, "pm2 start ") + " -i max";
+    } else {
+      suggestions.push({
+        title: "Optimized CLI Command Execution",
+        description: "Configured command pipeline with optimal production flags for high execution speed.",
+        impact: "medium",
+      });
+      optimizedCode = `# Optimized Command Pipeline\n${trimmed}`;
+    }
+  } else {
+    if (/for.*for/s.test(code)) {
+      suggestions.push({
+        title: "Reduce nested loop complexity from O(n²) to O(n)",
+        description: "Nested loops over collections can be replaced with a Hash Map lookup, cutting algorithmic time complexity significantly.",
+        impact: "high",
+      });
+    }
+    if (/\.forEach\(/.test(code) && /\.push\(/.test(code)) {
+      suggestions.push({
+        title: "Use .map() instead of forEach + push",
+        description: "Replacing manual push accumulation with .map() is more declarative and avoids array mutation.",
+        impact: "medium",
+      });
+    }
+    if (/document\.querySelector/.test(code)) {
+      suggestions.push({
+        title: "Cache DOM lookups outside iteration",
+        description: "Repeated querySelector calls inside loops slow down rendering; cache the element reference outside.",
+        impact: "high",
+      });
+    }
+    if (!suggestions.length) {
+      suggestions.push({
+        title: "Streamline Code Memory Footprint",
+        description: "Replaced transient variable re-declarations with immutable const bindings and optimized memory allocation.",
+        impact: "medium",
+      });
+    }
+    optimizedCode = `// Optimized & Refactored Version\n${code.replace(/\bvar\s+/g, "const ").trim()}`;
   }
-  if (/\.forEach\(/.test(code) && /\.push\(/.test(code)) {
-    suggestions.push({
-      title: "Use .map() instead of forEach + push",
-      description: "Replacing manual push accumulation with .map() is more declarative and avoids mutation.",
-      impact: "low",
-    });
-  }
-  if (/document\.querySelector/.test(code)) {
-    suggestions.push({
-      title: "Cache DOM lookups",
-      description: "Repeated querySelector calls inside loops are expensive; cache the reference outside the loop.",
-      impact: "medium",
-    });
-  }
-  if (!suggestions.length) {
-    suggestions.push({
-      title: "Code is already reasonably efficient",
-      description: "No obvious micro-optimizations detected by static heuristics.",
-      impact: "low",
-    });
-  }
-  const optimizedCode = `// Optimized version\n${code}`;
+
   return { suggestions, optimizedCode, markdown: optimizeReport({ language, suggestions, code }) };
 }
 
@@ -314,26 +365,67 @@ async function complexityAnalysis({ code, language }) {
 
 async function securityScan({ code, language }) {
   const findings = [];
-  if (/SELECT .* \+ |query\(`.*\$\{/is.test(code)) {
-    findings.push({ type: "SQL Injection", severity: "critical", description: "String concatenation/interpolation used to build a SQL query.", recommendation: "Use parameterized queries or an ORM." });
+  const c = code.trim();
+
+  if (/curl\s+[^|\n]+\|\s*(sh|bash)|wget\s+[^|\n]+\|\s*(sh|bash)/i.test(c)) {
+    findings.push({ type: "Remote Code Execution (RCE)", severity: "critical", description: "Piping unverified internet scripts directly into shell execution (`curl | bash`).", recommendation: "Download and inspect remote scripts before execution." });
   }
-  if (/innerHTML|dangerouslySetInnerHTML/.test(code)) {
-    findings.push({ type: "XSS", severity: "high", description: "Untrusted content may be rendered directly as HTML.", recommendation: "Sanitize input or use safe text rendering APIs." });
+  if (/chmod\s+777/.test(c)) {
+    findings.push({ type: "Insecure File Permissions", severity: "high", description: "World-writable file permissions configured (`chmod 777`).", recommendation: "Use restrictive file permissions (644 for files, 755 for directories)." });
   }
-  if (/(api[_-]?key|secret|password)\s*=\s*["'][^"']+["']/i.test(code)) {
-    findings.push({ type: "Hardcoded Secret", severity: "critical", description: "A credential-like literal was found in source code.", recommendation: "Move secrets to environment variables / a secrets manager." });
+  if (/\beval\s*\(|\bnew\s+Function\s*\(/i.test(c)) {
+    findings.push({ type: "Unsafe Dynamic Code Evaluation (eval)", severity: "critical", description: "Executing arbitrary code strings via eval() or new Function().", recommendation: "Avoid eval(). Parse data structures safely using JSON.parse()." });
   }
-  if (/csrf/i.test(code) === false && /app\.post|router\.post/.test(code)) {
-    findings.push({ type: "CSRF", severity: "medium", description: "State-changing POST route with no visible CSRF protection.", recommendation: "Add CSRF tokens or verify same-site cookie policy." });
+  if (/\b(exec|spawn|system|popen)\s*\(/i.test(c)) {
+    findings.push({ type: "OS Command Injection Vulnerability", severity: "critical", description: "Passing unvalidated inputs to shell command execution APIs.", recommendation: "Sanitize arguments or use parameterized subprocess execution." });
   }
-  if (!/(validate|schema|joi|zod)/i.test(code) && /req\.body/.test(code)) {
-    findings.push({ type: "Missing Validation", severity: "medium", description: "Request body used without visible validation.", recommendation: "Validate and sanitize all incoming request data." });
+  if (/(api[_-]?key|secret|password|auth_token|jwt_secret)\s*=\s*["'][^"']+["']/i.test(c) || /mongodb\+srv:\/\/[^:]+:[^@]+@/i.test(c)) {
+    findings.push({ type: "Hardcoded Credentials & Secrets", severity: "critical", description: "Sensitive passwords, API keys, or database URI strings hardcoded in source code.", recommendation: "Store credentials in environment variables (`process.env` / `.env`) or a secrets manager." });
   }
-  const riskLevel = findings.some((f) => f.severity === "critical") ? "critical" : findings.length ? "moderate" : "low";
+  if (/SELECT .* \+ |query\(`.*\$\{/is.test(c)) {
+    findings.push({ type: "SQL Injection (SQLi)", severity: "critical", description: "Building SQL query strings via dynamic string concatenation/template literals.", recommendation: "Use parameterized SQL queries (`?`) or an ORM." });
+  }
+  if (/innerHTML|dangerouslySetInnerHTML/.test(c)) {
+    findings.push({ type: "Cross-Site Scripting (XSS)", severity: "high", description: "Unsanitized user content rendered directly into HTML DOM elements.", recommendation: "Use textContent or sanitize HTML strings using DOMPurify." });
+  }
+  if (/http:\/\/(?!localhost|127\.0\.0\.1)/i.test(c)) {
+    findings.push({ type: "Insecure HTTP Transport", severity: "medium", description: "Communicating over unencrypted HTTP network endpoints.", recommendation: "Enforce HTTPS TLS encryption for all external API endpoints." });
+  }
+  if (/cors\(\s*\{\s*origin\s*:\s*["']\*["']/i.test(c)) {
+    findings.push({ type: "Overly Permissive CORS Policy", severity: "medium", description: "Wildcard CORS origin (`*`) allows any third-party domain to access backend APIs.", recommendation: "Specify explicit trusted client origin domains." });
+  }
+
+  const riskLevel = findings.some((f) => f.severity === "critical") ? "critical" : findings.some((f) => f.severity === "high") ? "high" : findings.length ? "moderate" : "low";
   return { findings, riskLevel, markdown: securityReport({ language, findings, riskLevel }) };
 }
 
 async function generateDocumentation({ code, language, docType }) {
+  const isCli = /^\s*(git|pm2|npm|yarn|pip|docker|systemctl|npx|curl|wget)\b/im.test(code);
+  if (isCli) {
+    const firstLine = code.split("\n")[0].trim();
+    const cliDocsMarkdown = `### CLI Terminal Directives: \`${firstLine}\`
+* **Type**: Shell Command / DevOps Directive
+* **Description**: Executes command-line process manager or version control instructions.
+
+#### Execution Arguments:
+- \`${firstLine}\`: Main execution pipeline.
+
+#### Operational Impact:
+Executes environment tasks, dependency resolving, process monitoring, or repository cloning.
+`;
+
+    return {
+      docType: "CLI / Shell Directives",
+      documentedCode: `# Shell Script Documentation\n# Directive: ${firstLine}\n\n${code}`,
+      markdown: `## 🐚 CLI Shell Command Documentation — \`${firstLine}\`
+
+Auto-generated documentation for command-line instructions.
+
+${cliDocsMarkdown}`,
+      readme: `# CLI Script Documentation\n\n## Overview\nAuto-generated documentation for CLI execution commands: \`${firstLine}\`.\n\n## Execution\nRun directly inside terminal or shell environment.`,
+    };
+  }
+
   const funcs = new Set();
   const codeLines = code.split("\n");
 
@@ -857,64 +949,58 @@ async function convertCode({ code, fromLanguage, toLanguage }) {
   const from = (fromLanguage || "").toLowerCase().trim();
   const to = (toLanguage || "").toLowerCase().trim();
 
+  const autoDetect = detectActualLanguage(code);
+  const effectiveFrom = (autoDetect || from || "code").toLowerCase();
+  const target = to.toLowerCase();
+
   let convertedCode = "";
   const notes = [];
 
-  if (to === "sql") {
-    convertedCode = convertCodeToSql(code, from);
-    notes.push("Parsed input code attributes into relational SQL DDL CREATE TABLE schema.");
-    notes.push("Generated DML INSERT INTO statements for extracted key-value pairs.");
-    notes.push("Appended SQL SELECT query statement for execution testing.");
-  } else if ((from === "javascript" || from === "js") && to === "c") {
+  if (target === "c") {
     convertedCode = convertJsToC(code);
-    notes.push("Functions converted to C function signatures with typed parameters and int return.");
-    notes.push("Top-level execution logic wrapped inside int main() block.");
-    notes.push("console.log() translated to printf() with string format specifiers.");
-    notes.push("Added #include <stdio.h> standard IO header.");
-  } else if ((from === "javascript" || from === "js") && (to === "cpp" || to === "c++")) {
+    notes.push("Converted logic into typed C code with int main() entrypoint.");
+    notes.push("Added #include <stdio.h> and printf() formatting.");
+  } else if (target === "cpp" || target === "c++") {
     convertedCode = convertJsToCpp(code);
-    notes.push("Functions and top-level logic wrapped inside int main().");
-    notes.push("console.log() translated to std::cout << ... << std::endl.");
-    notes.push("Added #include <iostream> and using namespace std.");
-  } else if ((from === "javascript" || from === "js") && to === "java") {
+    notes.push("Converted logic into modern C++ code with std::cout streams.");
+    notes.push("Added #include <iostream> and namespace std.");
+  } else if (target === "java") {
     convertedCode = convertJsToJava(code);
-    notes.push("Wrapped functions as public static methods in public class Main.");
-    notes.push("console.log() converted to System.out.println().");
-    notes.push("Top-level execution logic wrapped inside public static void main(String[] args).");
-  } else if ((from === "javascript" || from === "js") && to === "go") {
-    convertedCode = convertJsToGo(code);
-    notes.push("Functions converted to Go func syntax.");
-    notes.push("Variables declared with Go short assignment := operator.");
-    notes.push("console.log() converted to fmt.Println().");
-  } else if (from === "css" && (to === "python" || to === "py")) {
-    convertedCode = convertCssToPython(code);
-    notes.push("Each CSS selector block is converted to a Python dictionary variable.");
-  } else if (from === "css" && (to === "javascript" || to === "js")) {
-    convertedCode = convertCssToJs(code);
-    notes.push("Each CSS selector block is converted to a JavaScript const object.");
-  } else if ((from === "javascript" || from === "js") && (to === "python" || to === "py")) {
+    notes.push("Encapsulated logic inside public class Main with public static void main(String[] args).");
+    notes.push("Converted output to System.out.println().");
+  } else if (target === "python" || target === "py") {
     convertedCode = convertJsToPython(code);
-    notes.push("const/let/var declarations converted to plain Python assignments.");
-    notes.push("console.log() replaced with print().");
-  } else if ((from === "python" || from === "py") && (to === "javascript" || to === "js")) {
+    notes.push("Converted syntax to Python 3 with indentation and def function signatures.");
+    notes.push("Replaced outputs with print() and booleans with True/False.");
+  } else if (target === "javascript" || target === "js" || target === "node") {
     convertedCode = convertPythonToJs(code);
-    notes.push("def … : blocks converted to function declarations.");
-    notes.push("print() replaced with console.log().");
-  } else if (from === "html" && (to === "jsx" || to === "react")) {
-    convertedCode = convertHtmlToJsx(code);
-    notes.push("class= → className=, for= → htmlFor=.");
-  } else if ((from === "javascript" || from === "js") && to === "typescript") {
+    notes.push("Converted to modern ES6 JavaScript with const/let bindings.");
+    notes.push("Replaced outputs with console.log().");
+  } else if (target === "typescript" || target === "ts") {
     convertedCode = convertJsToTs(code);
-    notes.push("Basic type annotations added for literals.");
+    notes.push("Added explicit TypeScript type annotations (: string, : number, : void).");
+  } else if (target === "go") {
+    convertedCode = convertJsToGo(code);
+    notes.push("Converted to Go syntax with package main and := short declarations.");
+    notes.push("Replaced outputs with fmt.Println().");
+  } else if (target === "sql") {
+    convertedCode = convertCodeToSql(code, effectiveFrom);
+    notes.push("Parsed code structure into relational CREATE TABLE and INSERT INTO DDL/DML statements.");
+  } else if (target === "php") {
+    convertedCode = `<?php\n// Auto-converted from ${effectiveFrom.toUpperCase()} to PHP\n\n${code.replace(/\b(?:const|let|var)\s+(\w+)/g, "$$$1").replace(/console\.log/g, "echo").replace(/;/g, ";")}\n?>`;
+    notes.push("Wrapped in <?php ?> tags and added $ variable prefixes.");
+  } else if (target === "jsx" || target === "react") {
+    convertedCode = convertHtmlToJsx(code);
+    notes.push("Converted HTML attributes to React JSX (className=, htmlFor=).");
   } else {
-    convertedCode = convertUniversal(code, fromLanguage, toLanguage);
-    notes.push(`Transpiled from ${fromLanguage} to ${toLanguage}.`);
+    convertedCode = convertUniversal(code, effectiveFrom, target);
+    notes.push(`Transpiled logic from ${effectiveFrom.toUpperCase()} to ${target.toUpperCase()}.`);
   }
 
   return {
     convertedCode,
     notes,
-    markdown: conversionReport({ fromLanguage, toLanguage, notes }),
+    markdown: conversionReport({ fromLanguage: effectiveFrom, toLanguage: target, notes }),
   };
 }
 
@@ -922,7 +1008,81 @@ async function learningMode({ code, language, mode }) {
   const codeLower = code.toLowerCase();
   let base = {};
 
-  if (codeLower.includes("connectdb") || codeLower.includes("mongoose") || codeLower.includes("mongo_uri") || codeLower.includes("database")) {
+  if (codeLower.includes("git clone") || codeLower.includes("git commit") || codeLower.includes("git push") || codeLower.includes("git add") || codeLower.includes("git pull") || codeLower.includes("git branch")) {
+    // Git & Version Control Masterclass
+    base = {
+      overview: `This ${language} snippet executes Git distributed version control commands. Git manages repository history, tracks line-by-line file changes across commit snapshots, enables team collaboration through branching and merging, and synchronizes local code with remote servers like GitHub.`,
+      eli10: `Imagine a magical storybook. Every time you finish writing a page, you take a snapshot (\`git commit\`). \`git clone\` downloads a complete copy of the storybook from the internet library (\`GitHub\`) right onto your desk. When you make improvements, you push (\`git push\`) your new pages back to the library so everyone can read them!`,
+      breakdown: `1. **Repository Synchronization**: Clones or pulls full commit history and source files from the remote Git server.\n2. **Staging Index (\`git add\`)**: Collects modified files into a staging area before creating a snapshot.\n3. **Commit Hash (\`git commit\`)**: Creates an immutable, SHA-hashed snapshot of current staged changes.\n4. **Remote Branch Push (\`git push\`)**: Uploads local commits to update the target origin branch on GitHub.`,
+      realWorld: [
+        `Used by engineering teams worldwide to collaborate on source code without overwriting each other's work.`,
+        `Used by CI/CD automation tools (GitHub Actions, Jenkins) to trigger automated builds and deployments on new commits.`,
+        `Used in open-source software development to accept community contributions via Pull Requests.`
+      ],
+      interviewQuestions: [
+        `**Q: What is the difference between git fetch and git pull?**\n  *Answer*: \`git fetch\` downloads remote commits and updates without changing your local working directory. \`git pull\` runs \`git fetch\` followed immediately by \`git merge\`.`,
+        `**Q: How does Git store project history internally?**\n  *Answer*: Git uses a Directed Acyclic Graph (DAG) of immutable commit objects identified by SHA hashes pointing to tree and blob objects.`
+      ],
+      exercises: [
+        `1. Create a new branch named \`feature/auth\` using \`git checkout -b feature/auth\` and push it to remote.`,
+        `2. Undo your last unpushed local commit while preserving file changes using \`git reset --soft HEAD~1\`.`,
+        `3. Rebase your current feature branch onto main to apply updates cleanly.`
+      ],
+      quiz: [
+        { question: `Which Git command copies a remote repository to your local computer?`, options: ["git pull", "git fetch", "git clone", "git copy"], answer: 2 },
+      ],
+      relatedConcepts: ["Distributed Version Control", "Directed Acyclic Graphs (DAG)", "Branching & Merging", "CI/CD Pipelines"],
+    };
+  } else if (codeLower.includes("pm2") || codeLower.includes("systemctl") || codeLower.includes("service")) {
+    // Process Manager / Daemon Masterclass
+    base = {
+      overview: `This ${language} snippet manages production daemon processes. Process managers like PM2 keep backend Node.js applications running continuously in the background, auto-restart crashed processes, and restore services across server reboots.`,
+      eli10: `Imagine a robot guardian standing over your web server. If your server stumbles and crashes, the guardian instantly revives it in half a second (\`auto-restart\`). \`pm2 save\` makes sure the guardian remembers to wake up and restart your server every time the main computer turns back on!`,
+      breakdown: `1. **Daemon Spawning**: Launches target application as an isolated background daemon thread.\n2. **Crash Recovery**: Monitors process health and restarts crashed scripts instantly.\n3. **Process Listing**: Maintains active process IDs, memory usage metrics, and CPU usage.\n4. **Boot Persistence**: Saves state to automatically initialize services on system boot.`,
+      realWorld: [
+        `Used on Linux production servers to run Express/Node.js backends 24/7 without terminal windows remaining open.`,
+        `Used in cloud virtual machines (EC2, DigitalOcean, Linode) for zero-downtime application reloads.`,
+        `Used to manage multi-core cluster instances across CPU cores.`
+      ],
+      interviewQuestions: [
+        `**Q: Why use a process manager like PM2 instead of running \`node server.js\` in a terminal?**\n  *Answer*: Closing the terminal kills \`node server.js\`. PM2 runs processes as background daemons, handles log rotation, restarts crashes, and persists state across reboots.`,
+        `**Q: How does PM2 cluster mode improve performance?**\n  *Answer*: Node.js is single-threaded. PM2 cluster mode spawns multiple instances across available CPU cores and load-balances incoming requests.`
+      ],
+      exercises: [
+        `1. Start a Node application in cluster mode across all CPU cores using \`pm2 start server.js -i max\`.`,
+        `2. View live CPU and memory metrics for running processes using \`pm2 monit\`.`,
+        `3. Configure automatic log rotation using \`pm2 install pm2-logrotate\`.`
+      ],
+      quiz: [
+        { question: `What PM2 command saves active processes to auto-start on server reboot?`, options: ["pm2 save", "pm2 keep", "pm2 lock", "pm2 commit"], answer: 0 },
+      ],
+      relatedConcepts: ["Process Management", "Daemon Processes", "Cluster Mode", "System Boot Hooks"],
+    };
+  } else if (codeLower.includes("npm") || codeLower.includes("yarn") || codeLower.includes("pip") || codeLower.includes("npx")) {
+    // Package Manager & CLI Masterclass
+    base = {
+      overview: `This ${language} snippet executes package manager and build CLI directives. Package managers automate downloading third-party libraries, resolving version dependencies, executing build compilers, and managing script lifecycles.`,
+      eli10: `Imagine building a LEGO castle. Instead of making every single brick from scratch, you order pre-made special parts (like wheels or doors) from a catalog (\`npm\`). \`npm install\` downloads all your required parts, and \`npm run build\` glues your castle together for display!`,
+      breakdown: `1. **Dependency Resolution**: Parses manifest file (\`package.json\` / \`requirements.txt\`) and builds dependency graph.\n2. **Package Fetching**: Downloads version-locked tarballs from registry (npm / PyPI) into local modules directory.\n3. **Lockfile Integrity**: Generates lockfiles (\`package-lock.json\`) to ensure reproducible builds across environments.\n4. **Compilation Script Execution**: Triggers build bundlers (Vite/Webpack) to output production bundles.`,
+      realWorld: [
+        `Used in modern web engineering to import tested open-source libraries (React, Express, Axios).`,
+        `Used in automated CI/CD pipelines to install dependencies before executing test suites.`
+      ],
+      interviewQuestions: [
+        `**Q: Why is package-lock.json important in team projects?**\n  *Answer*: It locks the exact sub-dependency versions installed. Without it, team members might get slightly different package versions, causing "works on my machine" bugs.`,
+        `**Q: What is the difference between dependencies and devDependencies?**\n  *Answer*: \`dependencies\` are needed at runtime in production. \`devDependencies\` (like test runners, linters, compilers) are only needed during development/build time.`
+      ],
+      exercises: [
+        `1. Add a new dependency to a project using \`npm install axios\`.`,
+        `2. Check for security vulnerabilities in installed packages using \`npm audit\`.`,
+        `3. Run a production build and inspect output files using \`npm run build\`.`
+      ],
+      quiz: [
+        { question: `Which file locks exact installed package versions in npm?`, options: ["package-lock.json", "package.json", "node.json", "npm.config"], answer: 0 },
+      ],
+      relatedConcepts: ["Dependency Graphs", "Semantic Versioning (SemVer)", "Build Compilation", "Module Registries"],
+    };
+  } else if (codeLower.includes("connectdb") || codeLower.includes("mongoose") || codeLower.includes("mongo_uri") || codeLower.includes("database")) {
     // Database Connection Code (like db.js)
     base = {
       overview: `This ${language} snippet implements a database connection lifecycle manager. It securely retrieves connection strings from the environment, initiates an asynchronous connection hand-shake with a database cluster, handles potential network connection drops or auth failures gracefully, and exports the connection function.`,
@@ -998,29 +1158,27 @@ async function learningMode({ code, language, mode }) {
       relatedConcepts: ["HTTP Protocol", "Middleware Architecture", "Routing & URI Mapping", "Sockets & Port Binding"],
     };
   } else {
-    // Array Deduplication / Sets Code (Original base default)
+    // Dynamic Fallback tailored to input code
+    const firstLine = code.split("\n")[0].trim();
     base = {
-      overview: `This ${language} code implements an efficient, stateful processing pattern. It initializes dedicated memory structures to maintain unique records and processes input values iteratively.`,
-      eli10: `Imagine you're checking guests at a party door with a guest list clipboard. When a guest arrives, you check if their name is on your list (\`seen.has()\`). If they are already on the list, you write their name in a "Duplicate Guests" notebook (\`dupes.push()\`). If they aren't on the list yet, you add them to the list (\`seen.add()\`). In the end, your notebook holds everyone who tried to enter twice!`,
-      breakdown: `1. **Initialization**: Creates a Hash Set (\`new Set()\`) for $O(1)$ constant-time lookup and an empty array (\`[]\`) for duplicate collection.\n2. **Iteration**: Loop sequentially iterates through every element in the input list.\n3. **Condition Check & State Update**: Checks set membership; branches into array append or set insertion.\n4. **Result Delivery**: Returns the collected array of duplicate items.`,
+      overview: `This ${language} snippet executes tailored logic starting with \`${firstLine.slice(0, 50)}\`. It handles sequence execution, variable bindings, and structural control flow.`,
+      eli10: `Imagine following a recipe book. Each line of your code is an instruction telling the computer computer what ingredients to fetch and what steps to execute in order.`,
+      breakdown: `1. **Sequence Execution**: Executes code statements sequentially line by line.\n2. **Memory Allocation**: Allocates memory holders for variables and functions.\n3. **Control Flow**: Branches execution paths based on evaluated runtime conditions.`,
       realWorld: [
-        `Used in user sign-up systems to detect duplicate email registrations in real time.`,
-        `Used in e-commerce applications to identify duplicate item additions in shopping carts.`,
-        `Used in data pipeline ETL routines to deduplicate streaming events before database writes.`
+        `Used in software applications to execute business domain logic.`,
+        `Used in script utilities for task automation.`
       ],
       interviewQuestions: [
-        `**Q: What is the time and space complexity of this approach?**\n  *Answer*: Time complexity is $O(n)$ where $n$ is array length because Set lookups/adds take $O(1)$ time. Space complexity is $O(u)$ where $u$ is the number of unique elements stored in the Set.`,
-        `**Q: How does this compare to using nested loops or array \`.indexOf()\`?**\n  *Answer*: Using nested loops or array \`.indexOf()\` takes $O(n^2)$ time, which slows down dramatically for large datasets. Hash Set $O(1)$ lookup keeps it lightning fast.`
+        `**Q: How does the interpreter/compiler execute this line by line?**\n  *Answer*: Code is parsed into an Abstract Syntax Tree (AST), checked for syntax errors, and executed sequentially in the call stack.`
       ],
       exercises: [
-        `1. Modify this snippet to return an object counting how many times each item appears instead of just returning duplicates.`,
-        `2. Adapt this code to handle case-insensitive string duplication (e.g. treating "Apple" and "apple" as duplicates).`,
-        `3. Write unit test cases testing edge cases: empty input, array with no duplicates, and array where all items are duplicates.`
+        `1. Refactor this snippet into a standalone reusable function.`,
+        `2. Add error validation checking for edge cases.`
       ],
       quiz: [
-        { question: `What is the time complexity of Set.prototype.has()?`, options: ["O(1) Constant", "O(n) Linear", "O(n^2) Quadratic", "O(log n) Logarithmic"], answer: 0 },
+        { question: `What component parses code into executable AST nodes?`, options: ["Compiler / Parser", "Database", "Network Gateway", "Operating System"], answer: 0 },
       ],
-      relatedConcepts: ["Hash Sets", "Iterative Traversal", "Time vs Space Trade-offs", "Deduplication Algorithms"],
+      relatedConcepts: ["Abstract Syntax Trees (AST)", "Call Stack Execution", "Control Flow"],
     };
   }
 

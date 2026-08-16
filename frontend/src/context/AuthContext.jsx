@@ -38,6 +38,19 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
+  const sendOtp = async (name, email) => {
+    const { data } = await api.post("/auth/send-otp", { name, email });
+    return data;
+  };
+
+  const verifyOtp = async (name, email, otp) => {
+    const { data } = await api.post("/auth/verify-otp", { name, email, otp });
+    localStorage.setItem("aica_token", data.token);
+    localStorage.setItem("aica_user", JSON.stringify(data.user));
+    setUser(data.user);
+    return data.user;
+  };
+
   const logout = () => {
     localStorage.removeItem("aica_token");
     localStorage.removeItem("aica_user");
@@ -45,7 +58,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, setUser, register, sendOtp, verifyOtp, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
