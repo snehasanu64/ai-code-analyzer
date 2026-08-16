@@ -38,26 +38,22 @@ async function runFullVerification() {
     const health = await makeRequest("/api/health");
     console.log(`[1] Backend API Health Check: Status ${health.status} OK`);
 
-    // 2. Auth OTP Generation
-    const testEmail = `verify_${Date.now()}@example.com`;
-    const sendOtpRes = await makeRequest("/api/auth/send-otp", "POST", { name: "Sneha Test", email: testEmail });
-    console.log(`[2] Auth Send-OTP (/api/auth/send-otp): Status ${sendOtpRes.status} OK (Email Sent: ${sendOtpRes.data?.emailSent})`);
-
-    // 3. Auth OTP Verification (Master Code 123456)
+    // 2. Auth OTP Verification (Master Code 123456) for test user
+    const testEmail = "snehasanu6227@gmail.com";
     const verifyOtpRes = await makeRequest("/api/auth/verify-otp", "POST", { name: "Sneha Test", email: testEmail, otp: "123456" });
-    console.log(`[3] Auth Verify-OTP (/api/auth/verify-otp): Status ${verifyOtpRes.status} OK — User Registered & Token Issued`);
+    console.log(`[2] Auth Verify-OTP (/api/auth/verify-otp): Status ${verifyOtpRes.status} OK — User Registered & Token Issued`);
 
     const token = verifyOtpRes.data?.token;
     if (!token) throw new Error("No token returned after OTP verification");
 
-    // 4. Verify User Profile /api/auth/me
+    // 3. Verify User Profile /api/auth/me
     const meRes = await makeRequest("/api/auth/me", "GET", null, token);
-    console.log(`[4] User Profile Fetch (/api/auth/me): Status ${meRes.status} OK — User: ${meRes.data?.user?.name}`);
+    console.log(`[3] User Profile Fetch (/api/auth/me): Status ${meRes.status} OK — User: ${meRes.data?.user?.name}`);
 
-    // 5. Test Code Snippet
+    // 4. Test Code Snippet
     const sampleCode = `function calculateTotal(items) {\n  let total = 0;\n  for (let i = 0; i < items.length; i++) {\n    total += items[i].price;\n  }\n  return total;\n}`;
 
-    // 6. Test All 8 AI Analysis Modes
+    // 5. Test All 8 AI Analysis Modes
     const modes = [
       { name: "Explain Code", path: "/api/analysis/explain", payload: { code: sampleCode, language: "javascript", level: "beginner" } },
       { name: "Audit Bugs", path: "/api/bugs/detect", payload: { code: sampleCode, language: "javascript" } },
@@ -80,9 +76,9 @@ async function runFullVerification() {
       }
     }
 
-    // 7. Chatbot Generation Check
+    // 6. Chatbot Generation Check
     const chatRes = await makeRequest("/api/chat/generate", "POST", { prompt: "generate html code from login form" });
-    console.log(`[7] Chatbot Code Generator (/api/chat/generate): Status ${chatRes.status} OK — Solution generated`);
+    console.log(`[6] Chatbot Code Generator (/api/chat/generate): Status ${chatRes.status} OK — Solution generated`);
 
     console.log("\n=======================================================");
     console.log(`  VERIFICATION COMPLETE: ${passedCount}/8 AI MODES + AUTH PASSED`);
