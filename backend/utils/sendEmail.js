@@ -17,6 +17,7 @@ const pooledTransporter = nodemailer.createTransport({
 
 async function sendOtpEmail({ to, name, otp }) {
   const recipient = to.trim();
+  const brevoApiKey = (process.env.BREVO_API_KEY || "").trim();
   const resendApiKey = (process.env.RESEND_API_KEY || "").trim();
 
   const mailOptions = {
@@ -48,7 +49,37 @@ async function sendOtpEmail({ to, name, otp }) {
     `,
   };
 
-  // 1. Try Resend HTTP REST API
+  // 1. Brevo API: Delivers to ANY email address in the world (No owner email restriction)
+  if (brevoApiKey) {
+    try {
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "api-key": brevoApiKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: { name: "AI Code Analyzer", email: emailUser },
+          to: [{ email: recipient, name: name || recipient }],
+          subject: mailOptions.subject,
+          htmlContent: mailOptions.html,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.messageId) {
+        console.log(`[BREVO API SUCCESS] Real OTP Email delivered to ${recipient} in < 1s! ID: ${data.messageId}`);
+        return { success: true, messageId: data.messageId };
+      } else {
+        console.warn(`[BREVO API WARN] ${recipient}: ${data.message || "Failed"}. Retrying next transport...`);
+      }
+    } catch (e) {
+      console.warn(`[BREVO API ERROR] ${recipient}: ${e.message}. Retrying next transport...`);
+    }
+  }
+
+  // 2. Resend API
   if (resendApiKey) {
     try {
       const res = await fetch("https://api.resend.com/emails", {
@@ -77,7 +108,7 @@ async function sendOtpEmail({ to, name, otp }) {
     }
   }
 
-  // 2. Fallback Transporter for Friend Emails
+  // 3. Fallback Transporter for Friend Emails
   try {
     const info = await pooledTransporter.sendMail(mailOptions);
     console.log(`[SMTP FALLBACK SUCCESS] Real OTP email delivered to ${recipient}! Message ID: ${info.messageId}`);
