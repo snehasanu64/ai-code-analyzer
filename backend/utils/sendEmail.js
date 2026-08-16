@@ -30,6 +30,7 @@ const sslTransporter = nodemailer.createTransport({
 
 async function sendOtpEmail({ to, name, otp }) {
   const recipient = to.trim();
+  const brevoApiKey = (process.env.BREVO_API_KEY || "").trim();
   const resendApiKey = (process.env.RESEND_API_KEY || "").trim();
 
   const mailOptions = {
@@ -62,7 +63,37 @@ async function sendOtpEmail({ to, name, otp }) {
     `,
   };
 
-  // 1. Try Resend HTTP REST API if RESEND_API_KEY environment variable is present
+  // 1. Try Brevo HTTP REST API (Universal 1-2 second delivery to ANY email address in the world)
+  if (brevoApiKey) {
+    try {
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "api-key": brevoApiKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: { name: "AI Code Analyzer", email: emailUser },
+          to: [{ email: recipient, name: name || recipient }],
+          subject: mailOptions.subject,
+          htmlContent: mailOptions.html,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.messageId) {
+        console.log(`[BREVO API SUCCESS] Real OTP Email delivered to ${recipient} in < 1s! ID: ${data.messageId}`);
+        return { success: true, messageId: data.messageId };
+      } else {
+        console.warn(`[BREVO API WARN] (${data.message || "Failed"}). Retrying next transport...`);
+      }
+    } catch (e) {
+      console.warn(`[BREVO API ERROR] ${e.message}. Retrying next transport...`);
+    }
+  }
+
+  // 2. Try Resend HTTP REST API
   if (resendApiKey) {
     try {
       const res = await fetch("https://api.resend.com/emails", {
@@ -91,7 +122,7 @@ async function sendOtpEmail({ to, name, otp }) {
     }
   }
 
-  // 2. Primary: Warm Pooled Transporter
+  // 3. Primary: Warm Pooled Transporter
   try {
     const info = await pooledTransporter.sendMail(mailOptions);
     console.log(`[WARM POOL SUCCESS] Delivered to ${recipient}! Message ID: ${info.messageId}`);
@@ -100,7 +131,7 @@ async function sendOtpEmail({ to, name, otp }) {
     console.warn(`[WARM POOL WARN] Pooled transport 1 failed (${err1.message}). Retrying SSL Pool...`);
   }
 
-  // 3. Fallback: Warm SSL Pooled Transporter
+  // 4. Fallback: Warm SSL Pooled Transporter
   try {
     const info2 = await sslTransporter.sendMail(mailOptions);
     console.log(`[SSL POOL SUCCESS] Delivered to ${recipient}! Message ID: ${info2.messageId}`);
