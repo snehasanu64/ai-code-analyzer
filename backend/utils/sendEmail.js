@@ -6,11 +6,17 @@ async function sendOtpEmail({ to, name, otp }) {
   const emailPass = (process.env.EMAIL_PASS || "bpmgrdwoscrkedrh").trim();
 
   try {
+    // Explicit SSL Port 465 connection for cloud server compatibility (Render, AWS, Heroku)
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
       auth: {
         user: emailUser,
         pass: emailPass,
+      },
+      tls: {
+        rejectUnauthorized: false,
       },
     });
 
@@ -37,10 +43,10 @@ async function sendOtpEmail({ to, name, otp }) {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(`[GMAIL SUCCESS] Real OTP Email delivered to ${to}! Message ID: ${info.messageId}`);
+    console.log(`[GMAIL SSL SUCCESS] Real OTP Email delivered to ${to}! Message ID: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (err) {
-    console.error(`[GMAIL ERROR] Email dispatch failed for ${to}:`, err.message);
+    console.error(`[GMAIL SSL ERROR] Email dispatch failed for ${to}:`, err.message);
     return { success: false, error: err.message };
   }
 }
