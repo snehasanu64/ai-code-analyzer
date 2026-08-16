@@ -1,13 +1,35 @@
 require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
+const nodemailer = require("nodemailer");
+
+const emailUser = (process.env.EMAIL_USER || "testdev7353@gmail.com").trim();
+const emailPass = (process.env.EMAIL_PASS || "bpmgrdwoscrkedrh").trim();
+
+const pooledTransporter = nodemailer.createTransport({
+  pool: true,
+  maxConnections: 5,
+  maxMessages: 200,
+  service: "gmail",
+  auth: { user: emailUser, pass: emailPass },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
+});
 
 async function sendOtpEmail({ to, name, otp }) {
   const recipient = to.trim();
   const resendApiKey = (process.env.RESEND_API_KEY || "").trim();
 
   const mailOptions = {
-    from: "AI Code Analyzer <onboarding@resend.dev>",
-    to: [recipient],
+    from: `"AI Code Analyzer" <${emailUser}>`,
+    replyTo: emailUser,
+    to: recipient,
     subject: `🔐 Your AI Code Analyzer Verification OTP: ${otp}`,
+    priority: "high",
+    headers: {
+      "X-Priority": "1",
+      "X-MSMail-Priority": "High",
+      "Importance": "high",
+    },
     html: `
       <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 16px; background-color: #ffffff;">
         <div style="text-align: center; margin-bottom: 20px;">
@@ -26,37 +48,43 @@ async function sendOtpEmail({ to, name, otp }) {
     `,
   };
 
-  if (!resendApiKey) {
-    console.error("[RESEND ONLY] RESEND_API_KEY environment variable missing.");
-    return { success: false, error: "RESEND_API_KEY missing" };
+  // 1. Try Resend HTTP REST API
+  if (resendApiKey) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "AI Code Analyzer <onboarding@resend.dev>",
+          to: [recipient],
+          subject: mailOptions.subject,
+          html: mailOptions.html,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.id) {
+        console.log(`[RESEND API SUCCESS] Delivered to ${recipient} in < 1s! ID: ${data.id}`);
+        return { success: true, id: data.id };
+      } else {
+        console.warn(`[RESEND API WARN] ${recipient}: (${data.message || "Restriction"}). Retrying SMTP...`);
+      }
+    } catch (err) {
+      console.warn(`[RESEND API ERROR] ${recipient}: ${err.message}. Retrying SMTP...`);
+    }
   }
 
+  // 2. Fallback Transporter for Friend Emails
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: mailOptions.from,
-        to: mailOptions.to,
-        subject: mailOptions.subject,
-        html: mailOptions.html,
-      }),
-    });
-
-    const data = await res.json();
-    if (res.ok && data.id) {
-      console.log(`[RESEND API SUCCESS] Real OTP email delivered to ${recipient}! ID: ${data.id}`);
-      return { success: true, id: data.id };
-    } else {
-      console.error(`[RESEND API ERROR] ${recipient}: ${data.message || JSON.stringify(data)}`);
-      return { success: false, error: data.message || "Resend API error" };
-    }
-  } catch (err) {
-    console.error(`[RESEND API EXCEPTION] ${recipient}: ${err.message}`);
-    return { success: false, error: err.message };
+    const info = await pooledTransporter.sendMail(mailOptions);
+    console.log(`[SMTP FALLBACK SUCCESS] Real OTP email delivered to ${recipient}! Message ID: ${info.messageId}`);
+    return { success: true, messageId: info.messageId };
+  } catch (smtpErr) {
+    console.error(`[SMTP FALLBACK ERROR] ${recipient}: ${smtpErr.message}`);
+    return { success: false, error: smtpErr.message };
   }
 }
 
