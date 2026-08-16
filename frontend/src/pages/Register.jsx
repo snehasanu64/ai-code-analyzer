@@ -22,15 +22,12 @@ export default function Register() {
     return () => clearInterval(interval);
   }, [step, timer]);
 
-  const [previewOtp, setPreviewOtp] = useState("");
-
   const handleSendOtp = async (e) => {
     if (e) e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const res = await sendOtp(form.name, form.email);
-      if (res?.otp) setPreviewOtp(res.otp);
+      await sendOtp(form.name, form.email);
       setStep(2);
       setTimer(120);
     } catch (err) {
@@ -102,20 +99,8 @@ export default function Register() {
               <span>OTP Sent to Your Email</span>
             </div>
             <p className="text-xs text-purple-700 leading-relaxed">
-              We sent a 6-digit verification code directly to <strong className="font-semibold text-purple-900">{form.email}</strong>. Check your Inbox or Spam folder.
+              We sent a 6-digit verification code directly to <strong className="font-semibold text-purple-900">{form.email}</strong>. Check your inbox to continue.
             </p>
-            {previewOtp && (
-              <div className="mt-3 pt-2.5 border-t border-purple-200 flex items-center justify-between text-xs text-purple-900 bg-white/90 rounded-lg px-3 py-1.5 font-mono shadow-2xs">
-                <span>Verification OTP: <strong className="text-purple-700 text-sm tracking-wider">{previewOtp}</strong></span>
-                <button
-                  type="button"
-                  onClick={() => setOtp(previewOtp)}
-                  className="text-[11px] font-sans font-bold text-purple-600 hover:text-purple-800 underline"
-                >
-                  Auto-fill Code
-                </button>
-              </div>
-            )}
           </div>
 
           <div>

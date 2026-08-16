@@ -2,7 +2,6 @@ require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") }
 const nodemailer = require("nodemailer");
 
 async function sendOtpEmail({ to, name, otp }) {
-  // Use environment variables OR fallback to verified working Gmail credentials
   const emailUser = (process.env.EMAIL_USER || "testdev7353@gmail.com").trim();
   const emailPass = (process.env.EMAIL_PASS || "bpmgrdwoscrkedrh").trim();
 
@@ -37,13 +36,7 @@ async function sendOtpEmail({ to, name, otp }) {
       `,
     };
 
-    // Send email with a 5-second timeout race safeguard
-    const sendPromise = transporter.sendMail(mailOptions);
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Email dispatch timeout")), 5000)
-    );
-
-    const info = await Promise.race([sendPromise, timeoutPromise]);
+    const info = await transporter.sendMail(mailOptions);
     console.log(`[GMAIL SUCCESS] Real OTP Email delivered to ${to}! Message ID: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (err) {
