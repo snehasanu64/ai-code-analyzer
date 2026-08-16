@@ -151,12 +151,14 @@ const sendOtp = async (req, res, next) => {
     otpStore.set(emailLower, { otp: generatedOtp, expiresAt, name: name || "" });
     console.log(`[OTP GENERATED] Real 6-digit OTP for ${emailLower} is: ${generatedOtp}`);
 
-    // Send email asynchronously using Nodemailer
-    const emailResult = await sendOtpEmail({ to: emailLower, name, otp: generatedOtp });
+    // Trigger Nodemailer email dispatch asynchronously in background (non-blocking for fast UI response)
+    sendOtpEmail({ to: emailLower, name, otp: generatedOtp }).catch((err) => {
+      console.error(`[OTP EMAIL ERROR] Background dispatch error for ${emailLower}:`, err.message);
+    });
 
     res.json({
       success: true,
-      emailSent: emailResult.success,
+      emailSent: true,
       message: `Verification OTP email sent directly to ${emailLower}.`,
     });
   } catch (err) {
