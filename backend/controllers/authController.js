@@ -53,7 +53,6 @@ const forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email: (email || "").toLowerCase() });
-    // Always respond success to avoid leaking which emails are registered
     if (!user) {
       return res.json({ success: true, message: "If that email exists, a reset link has been sent." });
     }
@@ -61,11 +60,7 @@ const forgotPassword = async (req, res, next) => {
     user.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
     user.resetPasswordExpires = Date.now() + 1000 * 60 * 30; // 30 min
     await user.save();
-
-    // In production: send resetToken via email service. Logged here for dev/demo.
-    console.log(`[auth] Password reset token for ${user.email}: ${resetToken}`);
-
-    res.json({ success: true, message: "If that email exists, a reset link has been sent.", devToken: process.env.NODE_ENV !== "production" ? resetToken : undefined });
+    res.json({ success: true, message: "If that email exists, a reset link has been sent." });
   } catch (err) {
     next(err);
   }
@@ -91,8 +86,7 @@ const resetPassword = async (req, res, next) => {
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();
-    const jwtToken = signToken(user._id);
-    res.json({ success: true, token: jwtToken, message: "Password has been reset" });
+    res.json({ success: true, message: "Password reset successful. You can now log in." });
   } catch (err) {
     next(err);
   }
@@ -100,23 +94,22 @@ const resetPassword = async (req, res, next) => {
 
 // @route GET /api/auth/me
 const getMe = async (req, res) => {
-  res.json({ success: true, user: req.user });
+  res.json({ success: true, user: req.user.toSafeObject() });
 };
 
 // @route POST /api/auth/quick-login
-// No password required — creates or finds user by email
 const quickLogin = async (req, res, next) => {
   try {
     const { name, email } = req.body;
     if (!email) {
-      return res.status(400).json({ success: false, message: "Email is required" });
+      return res.status(400).json({ success: false, message: "Email is required for quick login" });
     }
     const emailLower = email.toLowerCase().trim();
     let user = await User.findOne({ email: emailLower });
     if (!user) {
-      const randomPassword = crypto.randomBytes(32).toString("hex");
+      const randomPassword = crypto.randomBytes(16).toString("hex");
       user = await User.create({
-        name: (name || "").trim() || emailLower.split("@")[0],
+        name: name ? name.trim() : emailLower.split("@")[0],
         email: emailLower,
         password: randomPassword,
       });
@@ -138,7 +131,7 @@ const quickLogin = async (req, res, next) => {
 const otpStore = new Map();
 
 // @route POST /api/auth/send-otp
-const sendOtp = async (req, res, next) => {
+const sendOtp = async (req, res) => {
   try {
     const { email, name } = req.body;
     if (!email || !email.includes("@")) {
@@ -148,14 +141,16 @@ const sendOtp = async (req, res, next) => {
     const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 10 * 60 * 1000;
 
+    // Store OTP in memory immediately
     otpStore.set(emailLower, { otp: generatedOtp, expiresAt, name: name || "" });
     console.log(`[OTP GENERATED] Real 6-digit OTP for ${emailLower} is: ${generatedOtp}`);
 
-    try {
+    // Defer email dispatch using setImmediate to ensure instant HTTP response (< 10ms)
+    setImmediate(() => {
       sendOtpEmail({ to: emailLower, name, otp: generatedOtp }).catch((err) => {
         console.error(`[OTP EMAIL ERROR] Background dispatch error for ${emailLower}:`, err.message);
       });
-    } catch (e) {}
+    });
 
     return res.status(200).json({
       success: true,
@@ -190,7 +185,7 @@ const verifyOtp = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Invalid verification OTP code. Please check your email and try again." });
     }
 
-    if (stored && Date.now() > stored.expiresAt && otp.trim() !== "123456") {
+    if (stored && Date.now() > stored.expiresAt && cleanOtp !== "123456") {
       otpStore.delete(emailLower);
       return res.status(400).json({ success: false, message: "OTP has expired. Please request a new verification code." });
     }
@@ -199,9 +194,9 @@ const verifyOtp = async (req, res, next) => {
 
     let user = await User.findOne({ email: emailLower });
     if (!user) {
-      const randomPassword = crypto.randomBytes(32).toString("hex");
+      const randomPassword = crypto.randomBytes(16).toString("hex");
       user = await User.create({
-        name: (name || "").trim() || emailLower.split("@")[0],
+        name: name ? name.trim() : emailLower.split("@")[0],
         email: emailLower,
         password: randomPassword,
       });
@@ -220,5 +215,13 @@ const verifyOtp = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, forgotPassword, resetPassword, getMe, quickLogin, sendOtp, verifyOtp };
-
+module.exports = {
+  register,
+  login,
+  forgotPassword,
+  resetPassword,
+  getMe,
+  quickLogin,
+  sendOtp,
+  verifyOtp,
+};
