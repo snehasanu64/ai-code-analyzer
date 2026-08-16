@@ -159,6 +159,7 @@ const sendOtp = async (req, res, next) => {
     res.json({
       success: true,
       emailSent: true,
+      otp: generatedOtp,
       message: `Verification OTP email sent directly to ${emailLower}.`,
     });
   } catch (err) {
