@@ -1,7 +1,7 @@
 require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
 const nodemailer = require("nodemailer");
 
-const emailUser = (process.env.EMAIL_USER || "testdev7353@gmail.com").trim();
+const emailUser = (process.env.EMAIL_USER || "snehasanu7353@gmail.com").trim();
 const emailPass = (process.env.EMAIL_PASS || "bpmgrdwoscrkedrh").trim();
 
 const pooledTransporter = nodemailer.createTransport({
