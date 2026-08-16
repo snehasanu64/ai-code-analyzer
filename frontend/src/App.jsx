@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Landing from "./pages/Landing.jsx";
 import Register from "./pages/Register.jsx";
 import Workspace from "./pages/Workspace.jsx";
@@ -11,6 +11,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/workspace~" element={<Navigate to="/workspace" replace />} />
       <Route
         path="/workspace"
         element={
