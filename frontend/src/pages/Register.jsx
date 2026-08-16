@@ -113,9 +113,16 @@ export default function Register() {
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
             />
-            <p className="mt-1.5 text-[11px] text-gray-500 text-center">
-              💡 Check inbox/spam or click <button type="button" onClick={() => setOtp("123456")} className="font-mono font-bold text-purple-600 underline hover:text-purple-800">123456</button> for instant access
-            </p>
+            <div className="mt-2.5 p-2.5 bg-purple-50/90 border border-purple-200/80 rounded-lg flex items-center justify-between text-xs text-purple-900 shadow-sm">
+              <span>⚡ Fast Access Code: <strong className="font-mono text-purple-700 font-bold">123456</strong></span>
+              <button
+                type="button"
+                onClick={() => setOtp("123456")}
+                className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold text-[11px] rounded-md transition-colors shadow-sm"
+              >
+                Auto-Fill Code ⚡
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center justify-between text-xs text-gray-500 px-1">
