@@ -52,9 +52,16 @@ app.use("/api/chat", chatRoutes);
 // Serve static frontend assets in production (Full-stack single server deployment)
 const frontendDist = path.join(__dirname, "../frontend/dist");
 if (require("fs").existsSync(frontendDist)) {
-  app.use(express.static(frontendDist));
+  app.use(express.static(frontendDist, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith(".html")) {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      }
+    },
+  }));
   app.get("*", (req, res, next) => {
     if (req.path.startsWith("/api/")) return next();
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.sendFile(path.join(frontendDist, "index.html"));
   });
 }
