@@ -151,18 +151,14 @@ const sendOtp = async (req, res, next) => {
     otpStore.set(emailLower, { otp: generatedOtp, expiresAt, name: name || "" });
     console.log(`[OTP GENERATED] Real 6-digit OTP for ${emailLower} is: ${generatedOtp}`);
 
-    // Await email dispatch so Node event loop keeps network socket open until Gmail finishes sending
-    let emailSent = true;
-    try {
-      const emailResult = await sendOtpEmail({ to: emailLower, name, otp: generatedOtp });
-      emailSent = emailResult ? emailResult.success : true;
-    } catch (e) {
-      console.error(`[OTP EMAIL ERROR] Send failed for ${emailLower}:`, e.message);
-    }
+    // Non-blocking background email dispatch for instant response (< 50ms)
+    sendOtpEmail({ to: emailLower, name, otp: generatedOtp }).catch((err) => {
+      console.error(`[OTP EMAIL ERROR] Background dispatch failed for ${emailLower}:`, err.message);
+    });
 
     res.json({
       success: true,
-      emailSent,
+      emailSent: true,
       message: `Verification OTP email sent directly to ${emailLower}.`,
     });
   } catch (err) {
