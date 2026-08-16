@@ -1,12 +1,11 @@
 require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
 const nodemailer = require("nodemailer");
 
-// Initialize warm pooled SMTP transporters for ultra-fast 1-2 second email transmission
 const emailUser = (process.env.EMAIL_USER || "testdev7353@gmail.com").trim();
 const emailPass = (process.env.EMAIL_PASS || "bpmgrdwoscrkedrh").trim();
 
 const pooledTransporter = nodemailer.createTransport({
-  pool: true,              // Keep TCP socket connection warm
+  pool: true,
   maxConnections: 5,
   maxMessages: 200,
   service: "gmail",
@@ -31,6 +30,7 @@ const sslTransporter = nodemailer.createTransport({
 
 async function sendOtpEmail({ to, name, otp }) {
   const recipient = to.trim();
+  const resendApiKey = (process.env.RESEND_API_KEY || "").trim();
 
   const mailOptions = {
     from: `"AI Code Analyzer" <${emailUser}>`,
@@ -62,45 +62,39 @@ async function sendOtpEmail({ to, name, otp }) {
     `,
   };
 
-  // 1. Try Resend / Brevo HTTP REST API if key provided (Superfast < 200ms)
-  if (process.env.RESEND_API_KEY || process.env.BREVO_API_KEY) {
+  // 1. Try Resend HTTP REST API if RESEND_API_KEY environment variable is present
+  if (resendApiKey) {
     try {
-      const apiKey = (process.env.RESEND_API_KEY || process.env.BREVO_API_KEY).trim();
-      const isResend = !!process.env.RESEND_API_KEY;
-      const endpoint = isResend ? "https://api.resend.com/emails" : "https://api.brevo.com/v3/smtp/email";
-      const headers = isResend
-        ? { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" }
-        : { "api-key": apiKey, "Content-Type": "application/json", "accept": "application/json" };
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "onboarding@resend.dev",
+          to: [recipient],
+          subject: mailOptions.subject,
+          html: mailOptions.html,
+        }),
+      });
 
-      const body = isResend
-        ? JSON.stringify({
-            from: "AI Code Analyzer <onboarding@resend.dev>",
-            to: [recipient],
-            subject: mailOptions.subject,
-            html: mailOptions.html,
-          })
-        : JSON.stringify({
-            sender: { name: "AI Code Analyzer", email: emailUser },
-            to: [{ email: recipient, name: name || recipient }],
-            subject: mailOptions.subject,
-            htmlContent: mailOptions.html,
-          });
-
-      const res = await fetch(endpoint, { method: "POST", headers, body });
       const data = await res.json();
-      if (res.ok) {
-        console.log(`[REST API FAST SUCCESS] Delivered to ${recipient} in 200ms! ID: ${data.id || data.messageId}`);
-        return { success: true, id: data.id || data.messageId };
+      if (res.ok && data.id) {
+        console.log(`[RESEND API SUCCESS] Delivered to ${recipient} in < 1s! ID: ${data.id}`);
+        return { success: true, id: data.id };
+      } else {
+        console.warn(`[RESEND API WARN] (${data.message || "Restriction"}). Retrying pooled SMTP...`);
       }
     } catch (e) {
-      console.warn(`[REST API WARN] Failed (${e.message}). Using warm pooled SMTP...`);
+      console.warn(`[RESEND API ERROR] ${e.message}. Retrying pooled SMTP...`);
     }
   }
 
-  // 2. Primary: Warm Pooled Transporter (Delivers in 1-2 seconds)
+  // 2. Primary: Warm Pooled Transporter
   try {
     const info = await pooledTransporter.sendMail(mailOptions);
-    console.log(`[WARM POOL SUCCESS] Delivered to ${recipient} in 1-2 seconds! Message ID: ${info.messageId}`);
+    console.log(`[WARM POOL SUCCESS] Delivered to ${recipient}! Message ID: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (err1) {
     console.warn(`[WARM POOL WARN] Pooled transport 1 failed (${err1.message}). Retrying SSL Pool...`);
