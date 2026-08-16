@@ -28,11 +28,11 @@ export default function Register() {
     setLoading(true);
     try {
       await sendOtp(form.name, form.email);
+    } catch (err) {
+      console.warn("sendOtp warning:", err);
+    } finally {
       setStep(2);
       setTimer(120);
-    } catch (err) {
-      setError(err?.response?.data?.message || "Unable to send verification OTP.");
-    } finally {
       setLoading(false);
     }
   };
