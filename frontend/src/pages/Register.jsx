@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { UserPlus, ShieldCheck, Mail, ArrowLeft, RefreshCw } from "lucide-react";
+import { UserPlus, ShieldCheck, Mail, RefreshCw } from "lucide-react";
 import AuthLayout from "./AuthLayout.jsx";
 import { useAuth } from "../context/AuthContext";
 
@@ -22,15 +22,12 @@ export default function Register() {
     return () => clearInterval(interval);
   }, [step, timer]);
 
-  const [serverOtp, setServerOtp] = useState("");
-
   const handleSendOtp = async (e) => {
     if (e) e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const res = await sendOtp(form.name, form.email);
-      if (res?.otp) setServerOtp(res.otp);
+      await sendOtp(form.name, form.email);
     } catch (err) {
       console.warn("sendOtp warning:", err);
     } finally {
@@ -95,20 +92,15 @@ export default function Register() {
         <form onSubmit={handleVerifyOtp} className="space-y-4">
           {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
 
-          {/* Secure Email Delivery Notification & Code Display */}
-          <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center space-y-2">
-            <div className="flex items-center justify-center gap-2 text-sm font-semibold text-purple-800">
+          {/* Secure Email Delivery Notification */}
+          <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center">
+            <div className="flex items-center justify-center gap-2 text-sm font-semibold text-purple-800 mb-1">
               <Mail className="w-4 h-4 text-purple-600" />
-              <span>Verification OTP Sent</span>
+              <span>OTP Sent to Your Email</span>
             </div>
             <p className="text-xs text-purple-700 leading-relaxed">
-              Sent directly to <strong className="font-semibold text-purple-900">{form.email}</strong>. Check inbox/spam or use code below:
+              We sent a 6-digit verification code directly to <strong className="font-semibold text-purple-900">{form.email}</strong>. Check your inbox to continue.
             </p>
-            {serverOtp && (
-              <div className="inline-block bg-white border-2 border-purple-300 text-purple-900 font-mono text-xl font-extrabold tracking-widest px-4 py-1 rounded-lg shadow-sm">
-                {serverOtp}
-              </div>
-            )}
           </div>
 
           <div>
@@ -121,16 +113,6 @@ export default function Register() {
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
             />
-            <div className="mt-2.5 p-2.5 bg-purple-50/90 border border-purple-200/80 rounded-lg flex items-center justify-between text-xs text-purple-900 shadow-sm">
-              <span>⚡ Verification Code: <strong className="font-mono text-purple-700 font-bold">{serverOtp || "123456"}</strong></span>
-              <button
-                type="button"
-                onClick={() => setOtp(serverOtp || "123456")}
-                className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold text-[11px] rounded-md transition-colors shadow-sm"
-              >
-                Auto-Fill Code ⚡
-              </button>
-            </div>
           </div>
 
           <div className="flex items-center justify-between text-xs text-gray-500 px-1">
@@ -151,10 +133,14 @@ export default function Register() {
 
           <button
             type="button"
-            onClick={() => setStep(1)}
-            className="w-full text-xs text-gray-500 hover:text-gray-700 flex items-center justify-center gap-1 pt-1"
+            onClick={() => {
+              setStep(1);
+              setOtp("");
+              setError("");
+            }}
+            className="w-full text-center text-xs text-gray-500 hover:text-gray-800 transition-colors pt-2 flex items-center justify-center gap-1"
           >
-            <ArrowLeft className="w-3 h-3" /> Back to username & email
+            ← Back to username & email
           </button>
         </form>
       )}

@@ -155,7 +155,6 @@ const sendOtp = async (req, res) => {
     return res.status(200).json({
       success: true,
       emailSent: true,
-      otp: generatedOtp,
       message: `Verification OTP email sent directly to ${emailLower}.`,
     });
   } catch (err) {
@@ -164,7 +163,6 @@ const sendOtp = async (req, res) => {
     return res.status(200).json({
       success: true,
       emailSent: true,
-      otp: "123456",
       message: `Verification OTP email sent directly to ${emailLower}.`,
     });
   }
