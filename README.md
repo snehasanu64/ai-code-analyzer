@@ -1,52 +1,64 @@
-# AI Code Analyzer
+# ⚡ AI Code Analyzer & Audit Suite
 
-**Understand, Analyze, Optimize, and Secure Code with AI**
+> **Understand, Audit, Optimize, Secure, and Transpile Code with AI**
 
-A modern full-stack MERN application for AI-assisted code explanation, bug auditing, performance optimization, complexity analysis, security scanning, documentation generation, language transpilation, interactive learning, and natural language code generation.
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Render_Hosted-7c3aed?style=for-the-badge&logo=render)](https://ai-code-analyzer-5l5p.onrender.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-v18+-green?style=for-the-badge&logo=nodedotjs)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/React-v18-61dafb?style=for-the-badge&logo=react)](https://reactjs.org/)
+
+A modern full-stack MERN application featuring **8 AI Analysis Modes**, ultra-fast **1-second Brevo & Resend Email OTP Verification**, interactive **Monaco Code Editor**, floating **AI Assistant Chatbot**, and workspace-level API key management.
+
+---
+
+## 🌐 Live Web Application
+👉 **[https://ai-code-analyzer-5l5p.onrender.com](https://ai-code-analyzer-5l5p.onrender.com)**
 
 ---
 
 ## 🚀 Key Features
 
-* **📖 Explain Code**: Detailed breakdowns tailored to **Beginner**, **Intermediate**, or **Expert** developer levels.
-* **🐛 Audit Bugs**: Multi-language static bug detector covering **30+ patterns** across JavaScript/TypeScript, Python, C/C++, Java, SQL, and generic security rules (including unclosed template strings, incomplete `require`/`await` calls, buffer overflow risks, and hardcoded secrets).
-* **⚡ Optimize Performance**: Identifies bottlenecks, calculates Big-O time/space complexity, and generates refactored code.
-* **📊 Complexity Analysis**: Precise time ($O$) and space ($O$) complexity bounds with plain-English reasoning.
-* **🛡️ Security Scan**: Detects vulnerabilities including SQL Injection, XSS, CSRF, hardcoded credentials, and unguarded inputs.
-* **📄 Generate Docs**: Automatic symbol extraction supporting traditional functions, arrow functions (`const fn = () =>`), Python `def`, C/C++ type signatures, and classes — formatted into clean JSDoc/Docstring specs.
-* **🔁 Convert Language**: Idiomatic transpilation between languages (CSS → Python/JS, JS → C/C++/Python/Java, etc.) with interactive **Copy Code** and **Apply to Editor** actions.
-* **🎓 Learning Mode**: Custom ELI10 analogies, step-by-step mechanics, production real-world use-cases, technical interview questions, exercises, and quizzes tailored to the specific input code.
-* **🤖 Home Page AI Code Bot**: A floating interactive AI chatbot assistant (`CodeChatbot.jsx`) on the home page for generating instant code snippets from natural language prompts.
+* **🔐 Confidential Email OTP Auth**: Secure two-step registration & login with high-speed transactional email dispatch (Brevo API & Resend API) delivering 6-digit verification codes in **< 1.5 seconds**. Includes fallback master access code `998877`.
+* **📖 1. Explain Code**: Comprehensive code breakdowns tailored to **Beginner**, **Intermediate**, or **Expert** developer levels.
+* **🐛 2. Audit Bugs**: Static & AI-powered bug detection scanning **30+ bug patterns** across JS/TS, Python, C/C++, Java, SQL, and generic code.
+* **⚡ 3. Optimize Performance**: Identifies runtime bottlenecks, calculates Big-O bounds ($O(n)$, $O(1)$), and generates refactored code.
+* **📊 4. Complexity Analysis**: Detailed time & space complexity breakdowns with step-by-step mathematical reasoning.
+* **🛡️ 5. Security Scan**: Audits code for SQL Injection, XSS, CSRF, hardcoded secrets, unvalidated inputs, and buffer overflow risks.
+* **📄 6. Generate Documentation**: Automates symbol extraction (JS functions, arrow functions, Python `def`, C++ signatures, classes) into clean JSDoc/Docstring specs.
+* **🔁 7. Transpile / Convert Language**: Idiomatic conversion between 10+ programming languages with **Copy Code** and **Apply to Editor** shortcuts.
+* **🎓 8. Interactive Learning Mode**: Generates ELI10 analogies, step-by-step mechanics, real-world use-cases, technical interview questions, and quizzes.
+* **🤖 Floating AI Code Chatbot**: Interactive home-page assistant (`CodeChatbot.jsx`) for generating code snippets from natural language prompts.
+* **💻 Monaco Code Editor**: Full syntax highlighting, line numbers, automatic theme switching (Dark/Light mode), and code formatting.
 
 ---
 
 ## 🛠️ Tech Stack
 
 * **Frontend:** React 18 (Vite), Tailwind CSS, Framer Motion, Monaco Code Editor (`@monaco-editor/react`), React Syntax Highlighter, Lucide React, Axios, React Router DOM.
-* **Backend:** Node.js, Express.js, MongoDB Atlas (Mongoose), JWT Authentication, bcryptjs, Morgan, dotenv.
-* **AI Providers:** OpenAI REST Provider (`gpt-3.5-turbo`) + Advanced Multilingual Static Sandbox Fallback Engine.
+* **Backend:** Node.js, Express.js, MongoDB Atlas (Mongoose), JWT Authentication, Nodemailer, Brevo REST API, Resend REST API.
+* **AI Engine:** OpenAI REST Provider (`gpt-3.5-turbo`) + Multilingual Static Sandbox Fallback Engine.
 
 ---
 
 ## 📂 Project Structure
 
-```
+```text
 ai-code-analyzer/
 ├── backend/
 │   ├── config/
 │   │   └── db.js                 # MongoDB Atlas connection setup
-│   ├── controllers/              # Feature controllers (auth, analysis, bug, chat, etc.)
-│   ├── middleware/               # Auth (JWT), aiConfig (key resolution), errorHandler
+│   ├── controllers/              # Auth, Analysis, Bug Detection, Chat controllers
+│   ├── middleware/               # Auth (JWT), aiConfig key resolution, Error handlers
 │   ├── models/                   # Mongoose models (User, Analysis, History, Feedback)
-│   ├── routes/                   # REST API route handlers
+│   ├── routes/                   # REST API route endpoints
 │   ├── services/
-│   │   ├── aiService.js          # Central AI provider resolution & runner layer
+│   │   ├── aiService.js          # Central AI provider resolution & sandbox fallback
 │   │   └── providers/            # mockProvider, openaiProvider, geminiProvider, claudeProvider
-│   ├── utils/                    # analysisHelper, crypto encryption helpers
-│   └── server.js                 # Express server bootstrap & API route mounting
+│   ├── utils/                    # sendEmail (Brevo & Resend APIs), crypto encryption helpers
+│   └── server.js                 # Express server bootstrap & static asset serving
 └── frontend/
     ├── src/
-    │   ├── pages/                # Landing, Register, Workspace, Profile, NotFound
+    │   ├── pages/                # Landing, Register, Login, Workspace, Profile, NotFound
     │   ├── components/
     │   │   ├── landing/          # Hero, Features, Languages, DemoPreview, HowItWorks, CodeChatbot
     │   │   ├── dashboard/        # LeftPanel (History), CenterPanel (Monaco), RightPanel (AI Reports)
@@ -75,14 +87,18 @@ MONGO_URI=mongodb+srv://<user>:<password>@cluster0.mongodb.net/ai_code_analyzer
 JWT_SECRET=your_jwt_secret_here
 JWT_EXPIRES_IN=7d
 
-# Encryption Key for Workspace Keys
-ENCRYPTION_KEY=your_64_char_hex_encryption_key_here
+# Encryption Key for Custom Workspace Keys
+ENCRYPTION_KEY=your_64_char_hex_key
+
+# Transactional Email Providers (Ultra-Fast OTP Dispatch)
+BREVO_API_KEY=xkeysib-your_brevo_api_key_here
+RESEND_API_KEY=re_your_resend_api_key_here
+EMAIL_USER=snehasanu7353@gmail.com
+EMAIL_PASS=your_app_password
 
 # Global AI Provider Configuration (openai | gemini | claude | mock)
 AI_PROVIDER=openai
 OPENAI_API_KEY=sk-proj-your_openai_key_here
-GEMINI_API_KEY=
-ANTHROPIC_API_KEY=
 ```
 
 ### Frontend (`frontend/.env`)
@@ -113,19 +129,12 @@ npm run dev
 
 ---
 
-## 🌐 Production Deployment Guide
+## 🌐 Production Deployment (Render)
 
-### Deploy Backend (Render / Railway / Heroku)
-1. Set the root directory to `backend`.
-2. Configure Environment Variables (`MONGO_URI`, `JWT_SECRET`, `AI_PROVIDER`, `OPENAI_API_KEY`, `CLIENT_URL`).
-3. Build Command: `npm install`
-4. Start Command: `npm start` (or `node server.js`)
-
-### Deploy Frontend (Vercel / Netlify)
-1. Set the root directory to `frontend`.
-2. Build Command: `npm run build`
-3. Output Directory: `dist`
-4. Environment Variable: `VITE_API_URL=https://your-backend-domain.com/api`
+1. Connect your repository (`https://github.com/snehasanu64/ai-code-analyzer.git`) on [Render](https://dashboard.render.com).
+2. Set Build Command: `npm run build`
+3. Set Start Command: `npm start` (or `node backend/server.js`)
+4. Add Environment Variables: `MONGO_URI`, `JWT_SECRET`, `BREVO_API_KEY`, `OPENAI_API_KEY`, `NODE_ENV=production`.
 
 ---
 
