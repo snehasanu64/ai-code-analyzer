@@ -2,10 +2,11 @@
 
 > **An Intelligent Full-Stack Code Analysis, Auditing & Optimization Platform**
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Render_Hosted-7c3aed?style=for-the-badge&logo=render)](https://ai-code-analyzer-5l5p.onrender.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node.js-v18+-green?style=for-the-badge&logo=nodedotjs)](https://nodejs.org/)
-[![React](https://img.shields.io/badge/React-v18-61dafb?style=for-the-badge&logo=react)](https://reactjs.org/)
+[![Live Application](https://img.shields.io/badge/🚀_Live_Application-Online-7c3aed?style=for-the-badge)](https://ai-code-analyzer-5l5p.onrender.com)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
+[![Express](https://img.shields.io/badge/Express-4.x-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 
 **AI Code Analyzer** is a modern MERN application designed to help developers understand, audit, optimize, and secure source code. It features **8 AI-powered analysis modes**, an interactive **Monaco Code Editor**, a natural language **AI chatbot assistant**, secure **email OTP authentication**, and custom workspace API key management.
 
@@ -131,13 +132,7 @@ npm run dev
 
 ## 🌐 Production Deployment (Render)
 
-1. Connect your repository (`https://github.com/snehasanu64/ai-code-analyzer.git`) on [Render](https://dashboard.render.com).
+1. Connect your repository (`https://github.com/snehasanu64/ai-code-analyzer.git`) on your cloud host.
 2. Set Build Command: `npm run build`
 3. Set Start Command: `npm start` (or `node backend/server.js`)
 4. Add Environment Variables: `MONGO_URI`, `JWT_SECRET`, `BREVO_API_KEY`, `OPENAI_API_KEY`, `NODE_ENV=production`.
-
----
-
-## 📜 License
-
-Distributed under the **MIT License**.
