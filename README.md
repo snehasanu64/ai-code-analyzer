@@ -2,11 +2,11 @@
 
 > **An Intelligent Full-Stack Code Analysis, Auditing & Optimization Platform**
 
-[![Live Application](https://img.shields.io/badge/🚀_Live_Application-Online-7c3aed?style=for-the-badge)](https://ai-code-analyzer-5l5p.onrender.com)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
-[![Express](https://img.shields.io/badge/Express-4.x-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![Live](https://img.shields.io/badge/🚀_Live-Online-7c3aed?style=for-the-badge)](https://ai-code-analyzer-5l5p.onrender.com)
+[![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
+[![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 
 **AI Code Analyzer** is a modern MERN application designed to help developers understand, audit, optimize, and secure source code. It features **8 AI-powered analysis modes**, an interactive **Monaco Code Editor**, a natural language **AI chatbot assistant**, secure **email OTP authentication**, and custom workspace API key management.
 
