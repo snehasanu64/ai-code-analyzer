@@ -1,13 +1,13 @@
-# ⚡ AI Code Analyzer & Audit Suite
+# ⚡ AI Code Analyzer
 
-> **Understand, Audit, Optimize, Secure, and Transpile Code with AI**
+> **An Intelligent Full-Stack Code Analysis, Auditing & Optimization Platform**
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Render_Hosted-7c3aed?style=for-the-badge&logo=render)](https://ai-code-analyzer-5l5p.onrender.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-v18+-green?style=for-the-badge&logo=nodedotjs)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-v18-61dafb?style=for-the-badge&logo=react)](https://reactjs.org/)
 
-A modern full-stack MERN application featuring **8 AI Analysis Modes**, ultra-fast **1-second Brevo & Resend Email OTP Verification**, interactive **Monaco Code Editor**, floating **AI Assistant Chatbot**, and workspace-level API key management.
+**AI Code Analyzer** is a modern MERN application designed to help developers understand, audit, optimize, and secure source code. It features **8 AI-powered analysis modes**, an interactive **Monaco Code Editor**, a natural language **AI chatbot assistant**, secure **email OTP authentication**, and custom workspace API key management.
 
 ---
 
@@ -18,7 +18,7 @@ A modern full-stack MERN application featuring **8 AI Analysis Modes**, ultra-fa
 
 ## 🚀 Key Features
 
-* **🔐 Confidential Email OTP Auth**: Secure two-step registration & login with high-speed transactional email dispatch (Brevo API & Resend API) delivering 6-digit verification codes in **< 1.5 seconds**. Includes fallback master access code `998877`.
+* **🔐 Confidential Email OTP Auth**: Secure two-step registration & login with high-speed transactional email dispatch delivering 6-digit verification codes directly to the user's inbox in **< 1.5 seconds**. Includes master access fallback (`998877`).
 * **📖 1. Explain Code**: Comprehensive code breakdowns tailored to **Beginner**, **Intermediate**, or **Expert** developer levels.
 * **🐛 2. Audit Bugs**: Static & AI-powered bug detection scanning **30+ bug patterns** across JS/TS, Python, C/C++, Java, SQL, and generic code.
 * **⚡ 3. Optimize Performance**: Identifies runtime bottlenecks, calculates Big-O bounds ($O(n)$, $O(1)$), and generates refactored code.
