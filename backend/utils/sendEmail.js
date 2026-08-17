@@ -52,6 +52,7 @@ async function sendOtpEmail({ to, name, otp }) {
   // 1. Brevo API: Delivers to ANY email address in the world (No owner email restriction)
   if (brevoApiKey) {
     try {
+      const senderEmail = (process.env.BREVO_SENDER_EMAIL || "snehasanu7353@gmail.com").trim();
       const res = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: {
@@ -60,7 +61,7 @@ async function sendOtpEmail({ to, name, otp }) {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          sender: { name: "AI Code Analyzer", email: emailUser },
+          sender: { name: "AI Code Analyzer", email: senderEmail },
           to: [{ email: recipient, name: name || recipient }],
           subject: mailOptions.subject,
           htmlContent: mailOptions.html,
@@ -72,7 +73,7 @@ async function sendOtpEmail({ to, name, otp }) {
         console.log(`[BREVO API SUCCESS] Real OTP Email delivered to ${recipient} in < 1s! ID: ${data.messageId}`);
         return { success: true, messageId: data.messageId };
       } else {
-        console.warn(`[BREVO API WARN] ${recipient}: ${data.message || "Failed"}. Retrying next transport...`);
+        console.warn(`[BREVO API WARN] ${recipient}: ${data.message || JSON.stringify(data)}. Retrying next transport...`);
       }
     } catch (e) {
       console.warn(`[BREVO API ERROR] ${recipient}: ${e.message}. Retrying next transport...`);
