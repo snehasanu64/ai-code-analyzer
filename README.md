@@ -93,7 +93,7 @@ ENCRYPTION_KEY=your_64_char_hex_key
 # Transactional Email Providers (Ultra-Fast OTP Dispatch)
 BREVO_API_KEY=xkeysib-your_brevo_api_key_here
 RESEND_API_KEY=re_your_resend_api_key_here
-EMAIL_USER=snehasanu7353@gmail.com
+EMAIL_USER=your_email_id_here
 EMAIL_PASS=your_app_password
 
 # Global AI Provider Configuration (openai | gemini | claude | mock)
